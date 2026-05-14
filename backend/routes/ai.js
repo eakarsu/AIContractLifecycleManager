@@ -1,31 +1,17 @@
 const express = require('express');
-const axios = require('axios');
 const pool = require('../db');
 const auth = require('../middleware/auth');
+const { aiRateLimiter } = require('../middleware/rateLimiter');
+const { callOpenRouter, saveAIResult } = require('../services/aiHelper');
 const router = express.Router();
 
 const aiCall = async (system, userMsg, temp = 0.7) => {
-  const response = await axios.post(
-    `${process.env.OPENROUTER_BASE_URL}/chat/completions`,
-    {
-      model: process.env.OPENROUTER_MODEL,
-      messages: [{ role: 'system', content: system }, { role: 'user', content: userMsg }],
-      temperature: temp, max_tokens: 4096,
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'AI Contract Lifecycle Manager',
-      }
-    }
-  );
-  return response.data;
+  const r = await callOpenRouter(system, userMsg, { temperature: temp, maxTokens: 4096 });
+  return { choices: [{ message: { content: r.content } }], model: r.model, usage: r.usage };
 };
 
 // Chat - General contract assistant
-router.post('/chat', auth, async (req, res) => {
+router.post('/chat', auth, aiRateLimiter, async (req, res) => {
   try {
     const { message, conversation_id } = req.body;
     const data = await aiCall(
@@ -49,7 +35,7 @@ router.post('/chat', auth, async (req, res) => {
 });
 
 // Draft Contract
-router.post('/draft-contract', auth, async (req, res) => {
+router.post('/draft-contract', auth, aiRateLimiter, async (req, res) => {
   try {
     const { contract_type, parties, key_terms, jurisdiction, duration } = req.body;
     const data = await aiCall(
@@ -64,7 +50,7 @@ router.post('/draft-contract', auth, async (req, res) => {
 });
 
 // Review Contract
-router.post('/review-contract', auth, async (req, res) => {
+router.post('/review-contract', auth, aiRateLimiter, async (req, res) => {
   try {
     const { contract_text, review_focus } = req.body;
     const focuses = {
@@ -87,7 +73,7 @@ router.post('/review-contract', auth, async (req, res) => {
 });
 
 // Analyze Risk
-router.post('/analyze-risk', auth, async (req, res) => {
+router.post('/analyze-risk', auth, aiRateLimiter, async (req, res) => {
   try {
     const { contract_text, industry, contract_value } = req.body;
     const data = await aiCall(
@@ -102,7 +88,7 @@ router.post('/analyze-risk', auth, async (req, res) => {
 });
 
 // Generate Clause
-router.post('/generate-clause', auth, async (req, res) => {
+router.post('/generate-clause', auth, aiRateLimiter, async (req, res) => {
   try {
     const { clause_type, context, jurisdiction, tone } = req.body;
     const data = await aiCall(
@@ -117,7 +103,7 @@ router.post('/generate-clause', auth, async (req, res) => {
 });
 
 // Compare Contracts
-router.post('/compare-contracts', auth, async (req, res) => {
+router.post('/compare-contracts', auth, aiRateLimiter, async (req, res) => {
   try {
     const { contract_a, contract_b } = req.body;
     const data = await aiCall(
@@ -132,7 +118,7 @@ router.post('/compare-contracts', auth, async (req, res) => {
 });
 
 // Compliance Check
-router.post('/check-compliance', auth, async (req, res) => {
+router.post('/check-compliance', auth, aiRateLimiter, async (req, res) => {
   try {
     const { contract_text, regulations, industry } = req.body;
     const data = await aiCall(
@@ -147,7 +133,7 @@ router.post('/check-compliance', auth, async (req, res) => {
 });
 
 // Negotiate Terms
-router.post('/negotiate', auth, async (req, res) => {
+router.post('/negotiate', auth, aiRateLimiter, async (req, res) => {
   try {
     const { original_terms, desired_outcome, leverage_points } = req.body;
     const data = await aiCall(
@@ -162,7 +148,7 @@ router.post('/negotiate', auth, async (req, res) => {
 });
 
 // Summarize Contract
-router.post('/summarize', auth, async (req, res) => {
+router.post('/summarize', auth, aiRateLimiter, async (req, res) => {
   try {
     const { contract_text, audience } = req.body;
     const data = await aiCall(

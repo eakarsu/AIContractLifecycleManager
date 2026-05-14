@@ -2,11 +2,30 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FiGrid, FiFileText, FiList, FiCopy, FiUsers, FiCheckSquare, FiCheckCircle, FiEdit3, FiRefreshCw, FiShield, FiAlertTriangle, FiFlag, FiFolder, FiActivity, FiSettings, FiMessageSquare, FiChevronLeft, FiChevronRight, FiLogOut } from 'react-icons/fi';
+import { FiGrid, FiFileText, FiList, FiCopy, FiUsers, FiCheckSquare, FiCheckCircle, FiEdit3, FiRefreshCw, FiShield, FiAlertTriangle, FiFlag, FiFolder, FiActivity, FiSettings, FiMessageSquare, FiChevronLeft, FiChevronRight, FiLogOut, FiZap, FiSearch, FiCpu } from 'react-icons/fi';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CrudPage from './components/CrudPage';
 import AIChatPage from './pages/AIChatPage';
+import AICustomToolsPage from './pages/AICustomToolsPage';
+import AIAdvancedPage from './pages/AIAdvancedPage';
+import EDiscoveryPage from './pages/EDiscoveryPage';
+
+// // === Batch 02 Gaps & Frontend Mounts ===
+import CfAgenticContractNegotiation from './pages/CfAgenticContractNegotiation';
+import CfPredictiveRenewal from './pages/CfPredictiveRenewal';
+import CfRegulatoryChangeImpact from './pages/CfRegulatoryChangeImpact';
+import CfPortfolioAnalytics from './pages/CfPortfolioAnalytics';
+import CfVariantGenerationForNegotiation from './pages/CfVariantGenerationForNegotiation';
+import GapAmendmentsLacksAnalyzeAmendmentImpact from './pages/GapAmendmentsLacksAnalyzeAmendmentImpact';
+import GapRenewalsLacksPredictRenewalSuccessOrPredictRenewalTe from './pages/GapRenewalsLacksPredictRenewalSuccessOrPredictRenewalTe';
+import GapApprovalsLacksPredictApprovalLikelihood from './pages/GapApprovalsLacksPredictApprovalLikelihood';
+import GapPartiesLacksCounterpartyRiskScoring from './pages/GapPartiesLacksCounterpartyRiskScoring';
+import GapLimitedThirdPartyIntegrationsNoDocusignSlackHubspotO from './pages/GapLimitedThirdPartyIntegrationsNoDocusignSlackHubspotO';
+import GapNoAutomatedRenewalReminderOrAutoEscalationWorkflow from './pages/GapNoAutomatedRenewalReminderOrAutoEscalationWorkflow';
+import GapNoAnalyticsDashboardContractSpendRiskHeatmapCycleTim from './pages/GapNoAnalyticsDashboardContractSpendRiskHeatmapCycleTim';
+import GapNoVariantPlaybookManagementAlternativeTemplateSequence from './pages/GapNoVariantPlaybookManagementAlternativeTemplateSequence';
+import GapNoWebhooks from './pages/GapNoWebhooks';
 
 const pages = [
   { path:'/contracts', label:'Contracts', icon:<FiFileText/>, api:'contracts',
@@ -159,6 +178,9 @@ function Sidebar({ collapsed, setCollapsed }) {
       <ul className="nav-items">
         <NavLink to="/dashboard" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiGrid/></span><span className="nav-label">Dashboard</span></NavLink>
         <NavLink to="/ai-chat" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiMessageSquare/></span><span className="nav-label">AI Assistant</span></NavLink>
+        <NavLink to="/ai-custom" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiZap/></span><span className="nav-label">AI Custom Tools</span></NavLink>
+        <NavLink to="/ai-advanced" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiCpu/></span><span className="nav-label">AI Advanced</span></NavLink>
+        <NavLink to="/ai-ediscovery" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiSearch/></span><span className="nav-label">eDiscovery</span></NavLink>
       </ul>
       <div className="sidebar-section-title">Contracts</div>
       <ul className="nav-items">
@@ -188,9 +210,28 @@ function AppLayout() {
         <Routes>
           <Route path="/dashboard" element={<Dashboard pages={pages}/>} />
           <Route path="/ai-chat" element={<AIChatPage/>} />
+          <Route path="/ai-custom" element={<AICustomToolsPage/>} />
+          <Route path="/ai-advanced" element={<AIAdvancedPage/>} />
+          <Route path="/ai-ediscovery" element={<EDiscoveryPage/>} />
           {pages.map(p => (<Route key={p.path} path={p.path} element={<CrudPage title={p.label} apiPath={p.api} columns={p.columns} fields={p.fields} />}/>))}
           <Route path="*" element={<Navigate to="/dashboard"/>} />
-        </Routes>
+        
+        {/* // === Batch 02 Gaps & Frontend Mounts === */}
+        <Route path="/cf/agentic-contract-negotiation" element={<CfAgenticContractNegotiation />} />
+        <Route path="/cf/predictive-renewal" element={<CfPredictiveRenewal />} />
+        <Route path="/cf/regulatory-change-impact" element={<CfRegulatoryChangeImpact />} />
+        <Route path="/cf/portfolio-analytics" element={<CfPortfolioAnalytics />} />
+        <Route path="/cf/variant-generation-for-negotiation" element={<CfVariantGenerationForNegotiation />} />
+        <Route path="/gap/amendments-lacks-analyze-amendment-impact" element={<GapAmendmentsLacksAnalyzeAmendmentImpact />} />
+        <Route path="/gap/renewals-lacks-predict-renewal-success-or-predict-renewal-te" element={<GapRenewalsLacksPredictRenewalSuccessOrPredictRenewalTe />} />
+        <Route path="/gap/approvals-lacks-predict-approval-likelihood" element={<GapApprovalsLacksPredictApprovalLikelihood />} />
+        <Route path="/gap/parties-lacks-counterparty-risk-scoring" element={<GapPartiesLacksCounterpartyRiskScoring />} />
+        <Route path="/gap/limited-third-party-integrations-no-docusign-slack-hubspot-o" element={<GapLimitedThirdPartyIntegrationsNoDocusignSlackHubspotO />} />
+        <Route path="/gap/no-automated-renewal-reminder-or-auto-escalation-workflow" element={<GapNoAutomatedRenewalReminderOrAutoEscalationWorkflow />} />
+        <Route path="/gap/no-analytics-dashboard-contract-spend-risk-heatmap-cycle-tim" element={<GapNoAnalyticsDashboardContractSpendRiskHeatmapCycleTim />} />
+        <Route path="/gap/no-variant-playbook-management-alternative-template-sequence" element={<GapNoVariantPlaybookManagementAlternativeTemplateSequence />} />
+        <Route path="/gap/no-webhooks" element={<GapNoWebhooks />} />
+      </Routes>
       </div>
     </div>
   );
