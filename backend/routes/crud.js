@@ -6,7 +6,19 @@ function createCrudRouter(table, { orderBy = 'created_at DESC', jsonFields = [] 
   const router = express.Router();
 
   router.get('/', auth, async (req, res) => {
-    try { res.json((await pool.query(`SELECT * FROM ${table} ORDER BY ${orderBy}`)).rows); }
+    try {
+      // Support optional pagination via ?page=&limit=
+      if (req.query.page || req.query.limit) {
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const offset = (page - 1) * limit;
+        const countRes = await pool.query(`SELECT COUNT(*) FROM ${table}`);
+        const total = parseInt(countRes.rows[0].count);
+        const dataRes = await pool.query(`SELECT * FROM ${table} ORDER BY ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]);
+        return res.json({ data: dataRes.rows, total, page, limit, total_pages: Math.ceil(total / limit) });
+      }
+      res.json((await pool.query(`SELECT * FROM ${table} ORDER BY ${orderBy}`)).rows);
+    }
     catch (err) { res.status(500).json({ error: err.message }); }
   });
 
