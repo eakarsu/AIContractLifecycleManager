@@ -124,6 +124,9 @@ app.use('/api/gap-no-variant-playbook-management-alternative-template-sequence',
 // // === Batch 02 Gaps & Frontend Mounts ===
 app.use('/api/gap-no-webhooks', require('./routes/gap_no_webhooks'));
 
+// === Custom Views — 4 endpoints (mounted BEFORE 404 / listen) ===
+app.use('/api/custom-views', require('./routes/customViews'));
+
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
 

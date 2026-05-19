@@ -10,6 +10,7 @@ import AIChatPage from './pages/AIChatPage';
 import AICustomToolsPage from './pages/AICustomToolsPage';
 import AIAdvancedPage from './pages/AIAdvancedPage';
 import EDiscoveryPage from './pages/EDiscoveryPage';
+import CustomViewsPage from './pages/CustomViewsPage';
 
 // // === Batch 02 Gaps & Frontend Mounts ===
 import CfAgenticContractNegotiation from './pages/CfAgenticContractNegotiation';
@@ -181,6 +182,7 @@ function Sidebar({ collapsed, setCollapsed }) {
         <NavLink to="/ai-custom" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiZap/></span><span className="nav-label">AI Custom Tools</span></NavLink>
         <NavLink to="/ai-advanced" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiCpu/></span><span className="nav-label">AI Advanced</span></NavLink>
         <NavLink to="/ai-ediscovery" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiSearch/></span><span className="nav-label">eDiscovery</span></NavLink>
+        <NavLink to="/custom-views" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiGrid/></span><span className="nav-label">Contract Views</span></NavLink>
       </ul>
       <div className="sidebar-section-title">Contracts</div>
       <ul className="nav-items">
@@ -213,6 +215,7 @@ function AppLayout() {
           <Route path="/ai-custom" element={<AICustomToolsPage/>} />
           <Route path="/ai-advanced" element={<AIAdvancedPage/>} />
           <Route path="/ai-ediscovery" element={<EDiscoveryPage/>} />
+          <Route path="/custom-views" element={<CustomViewsPage/>} />
           {pages.map(p => (<Route key={p.path} path={p.path} element={<CrudPage title={p.label} apiPath={p.api} columns={p.columns} fields={p.fields} />}/>))}
           <Route path="*" element={<Navigate to="/dashboard"/>} />
         
