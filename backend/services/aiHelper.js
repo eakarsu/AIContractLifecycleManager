@@ -8,7 +8,7 @@
 
 const axios = require('axios');
 
-const DEFAULT_MODEL = 'anthropic/claude-3-5-sonnet-20241022';
+const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5';
 
 async function callOpenRouter(systemPrompt, userMessage, { temperature = 0.5, maxTokens = 3000, model = DEFAULT_MODEL } = {}) {
   const url = `${process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'}/chat/completions`;

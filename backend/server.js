@@ -126,6 +126,7 @@ app.use('/api/gap-no-webhooks', require('./routes/gap_no_webhooks'));
 
 // === Custom Views — 4 endpoints (mounted BEFORE 404 / listen) ===
 app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/obligation-evidence-room', require('./routes/obligationEvidenceRoom'));
 
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);

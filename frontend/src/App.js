@@ -11,6 +11,7 @@ import AICustomToolsPage from './pages/AICustomToolsPage';
 import AIAdvancedPage from './pages/AIAdvancedPage';
 import EDiscoveryPage from './pages/EDiscoveryPage';
 import CustomViewsPage from './pages/CustomViewsPage';
+import ObligationEvidenceRoom from './pages/ObligationEvidenceRoom';
 
 // // === Batch 02 Gaps & Frontend Mounts ===
 import CfAgenticContractNegotiation from './pages/CfAgenticContractNegotiation';
@@ -27,6 +28,11 @@ import GapNoAutomatedRenewalReminderOrAutoEscalationWorkflow from './pages/GapNo
 import GapNoAnalyticsDashboardContractSpendRiskHeatmapCycleTim from './pages/GapNoAnalyticsDashboardContractSpendRiskHeatmapCycleTim';
 import GapNoVariantPlaybookManagementAlternativeTemplateSequence from './pages/GapNoVariantPlaybookManagementAlternativeTemplateSequence';
 import GapNoWebhooks from './pages/GapNoWebhooks';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
+import TimelineView from './pages/TimelineView';
 
 const pages = [
   { path:'/contracts', label:'Contracts', icon:<FiFileText/>, api:'contracts',
@@ -183,6 +189,7 @@ function Sidebar({ collapsed, setCollapsed }) {
         <NavLink to="/ai-advanced" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiCpu/></span><span className="nav-label">AI Advanced</span></NavLink>
         <NavLink to="/ai-ediscovery" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiSearch/></span><span className="nav-label">eDiscovery</span></NavLink>
         <NavLink to="/custom-views" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiGrid/></span><span className="nav-label">Contract Views</span></NavLink>
+        <NavLink to="/obligation-evidence-room" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiFolder/></span><span className="nav-label">Evidence Room</span></NavLink>
       </ul>
       <div className="sidebar-section-title">Contracts</div>
       <ul className="nav-items">
@@ -210,12 +217,17 @@ function AppLayout() {
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <div className={`main-content ${collapsed ? 'expanded' : ''}`}>
         <Routes>
+        <Route path="/insights/timeline" element={<ProtectedRoute><TimelineView /></ProtectedRoute>} />
+        <Route path="/codex/custom-viz" element={<ProtectedRoute><CodexCustomVizFeature /></ProtectedRoute>} />
+        <Route path="/codex/operations" element={<ProtectedRoute><CodexOperationsFeature /></ProtectedRoute>} />
+
           <Route path="/dashboard" element={<Dashboard pages={pages}/>} />
           <Route path="/ai-chat" element={<AIChatPage/>} />
           <Route path="/ai-custom" element={<AICustomToolsPage/>} />
           <Route path="/ai-advanced" element={<AIAdvancedPage/>} />
           <Route path="/ai-ediscovery" element={<EDiscoveryPage/>} />
           <Route path="/custom-views" element={<CustomViewsPage/>} />
+          <Route path="/obligation-evidence-room" element={<ObligationEvidenceRoom/>} />
           {pages.map(p => (<Route key={p.path} path={p.path} element={<CrudPage title={p.label} apiPath={p.api} columns={p.columns} fields={p.fields} />}/>))}
           <Route path="*" element={<Navigate to="/dashboard"/>} />
         

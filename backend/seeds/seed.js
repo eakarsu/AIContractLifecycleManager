@@ -17,6 +17,7 @@ async function seed() {
       email VARCHAR(255) UNIQUE NOT NULL,
       password VARCHAR(255) NOT NULL,
       name VARCHAR(255) DEFAULT 'Admin',
+      role VARCHAR(50) DEFAULT 'user',
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
@@ -255,8 +256,8 @@ async function seed() {
   `);
 
   const hash = await bcrypt.hash(process.env.DEFAULT_PASSWORD || 'admin123', 10);
-  await pool.query('INSERT INTO users (email, password, name) VALUES ($1, $2, $3)',
-    [process.env.DEFAULT_EMAIL || 'admin@contractai.com', hash, 'Admin User']);
+  await pool.query('INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4)',
+    [process.env.DEFAULT_EMAIL || 'admin@contractai.com', hash, 'Admin User', 'admin']);
 
   // Contracts
   const contracts = [

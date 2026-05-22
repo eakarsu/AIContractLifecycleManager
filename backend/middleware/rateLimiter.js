@@ -10,7 +10,7 @@ const aiRateLimiter = rateLimit({
   keyGenerator: (req) => {
     // Key by authenticated user id if available, else by IP (using helper for IPv6 compatibility)
     const userId = req.user?.id || req.user?.userId;
-    return userId ? `user_${userId}` : ipKeyGenerator(req);
+    return userId ? `user_${userId}` : ipKeyGenerator(req.ip);
   },
   message: {
     error: 'AI rate limit exceeded. Maximum 20 AI calls per hour. Please try again later.'
