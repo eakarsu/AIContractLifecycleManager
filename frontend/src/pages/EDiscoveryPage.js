@@ -25,6 +25,32 @@ const tools = [
   },
 ];
 
+const presetButtonStyle = {
+  padding: '7px 11px',
+  borderRadius: 8,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const toolPresets = {
+  'analyze-relevance': [
+    { label: 'Termination email', form: { document_text: 'Email from Vendor COO: We should terminate the Acme implementation unless they accept the revised pricing by Friday. Their team missed two data delivery deadlines, and we need to preserve all communications about service credits.', case_description: 'Dispute over SaaS implementation delays, termination rights, missed milestones, and service credit obligations.' } },
+    { label: 'Pricing memo', form: { document_text: 'Internal memo: proposed 18% renewal increase for Acme due to usage spikes. Sales is concerned customer will challenge auto-renewal notice timing and audit the overage calculations.', case_description: 'Contract renewal dispute involving price increase, notice requirements, usage calculations, and audit rights.' } },
+  ],
+  'check-privilege': [
+    { label: 'Counsel email', form: { document_text: 'From: General Counsel. To: CFO. Subject: Legal advice on Acme termination. My legal assessment is that immediate termination may breach the 30-day cure provision. I recommend sending a reservation of rights letter first.' } },
+    { label: 'Business update', form: { document_text: 'From: Account Manager. To: Sales VP. Subject: Acme renewal. Customer is frustrated with onboarding delays and wants a discount. I think we can close if we offer a one-time service credit.' } },
+  ],
+  'extract-timeline': [
+    { label: 'Dispute narrative', form: { document_text: 'On January 5, the parties signed the MSA. On February 10, Customer delivered initial data. On March 1, Vendor missed the onboarding milestone. On March 15, Customer sent notice of breach. On April 1, Vendor offered service credits.' } },
+    { label: 'Renewal sequence', form: { document_text: 'The renewal notice was sent on May 2. Customer objected on May 15. Vendor sent revised pricing on May 22. Procurement requested backup usage data on June 3. Legal escalated the dispute on June 10.' } },
+  ],
+};
+
 function ResultDisplay({ result }) {
   if (!result) return null;
   if (result.raw || typeof result === 'string') {
@@ -136,6 +162,12 @@ export default function EDiscoveryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const tool = tools.find(t => t.id === activeTool);
+  const presets = toolPresets[activeTool] || [];
+  const applyPreset = (preset) => {
+    setForm(preset.form || {});
+    setResult(null);
+    setError(null);
+  };
 
   const submit = async () => {
     const missing = tool.fields.filter(f => f.required && !form[f.name]?.trim());
@@ -169,6 +201,15 @@ export default function EDiscoveryPage() {
       </div>
       <div className="ai-chat-container">
         <div className="ai-form">
+          {presets.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+              {presets.map(preset => (
+                <button key={preset.label} type="button" onClick={() => applyPreset(preset)} style={presetButtonStyle}>
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
           {tool.fields.map(f => (
             <div className="form-group" key={f.name}>
               <label className="form-label">{f.label}{f.required && ' *'}</label>

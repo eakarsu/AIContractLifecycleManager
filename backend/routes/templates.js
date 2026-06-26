@@ -8,7 +8,7 @@ const AI_SYSTEM = 'You are an expert contract lawyer and lifecycle management sp
 
 const aiCall = async (userMsg, temp = 0.5) => {
   const response = await axios.post(
-    `${process.env.OPENROUTER_BASE_URL}/chat/completions`,
+    `${process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'}/chat/completions`,
     {
       model: 'anthropic/claude-3-5-sonnet-20241022',
       messages: [{ role: 'system', content: AI_SYSTEM }, { role: 'user', content: userMsg }],

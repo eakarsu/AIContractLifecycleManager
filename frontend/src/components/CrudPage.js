@@ -3,6 +3,15 @@ import api from '../services/api';
 import { toast } from 'react-toastify';
 import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 
+function normalizeItems(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+}
+
 export default function CrudPage({ title, apiPath, columns, fields }) {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -12,7 +21,11 @@ export default function CrudPage({ title, apiPath, columns, fields }) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    try { setLoading(true); const { data } = await api.get(`/${apiPath}`); setItems(data); }
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/${apiPath}`);
+      setItems(normalizeItems(data));
+    }
     catch { toast.error('Failed to load data'); } finally { setLoading(false); }
   }, [apiPath]);
 
@@ -52,19 +65,21 @@ export default function CrudPage({ title, apiPath, columns, fields }) {
     return s.length > 70 ? s.substring(0, 70) + '...' : s;
   };
 
+  const safeItems = normalizeItems(items);
+
   return (
     <div className="page-container">
       <div className="page-header">
-        <div><h1 className="page-title">{title}</h1><p className="page-subtitle">{items.length} items</p></div>
+        <div><h1 className="page-title">{title}</h1><p className="page-subtitle">{safeItems.length} items</p></div>
         <button className="btn btn-primary" onClick={openNew}><FiPlus/> New</button>
       </div>
       {loading ? (<div className="loading"><div className="spinner"></div>Loading...</div>
-      ) : items.length === 0 ? (
+      ) : safeItems.length === 0 ? (
         <div className="empty-state"><div className="empty-icon">&#128221;</div><div className="empty-text">No {title.toLowerCase()} yet</div>
         <button className="btn btn-primary btn-sm" onClick={openNew} style={{marginTop:12}}><FiPlus/> Create First</button></div>
       ) : (
         <div className="table-container"><table><thead><tr><th>#</th>{columns.map(c => <th key={c}>{c.replace(/_/g,' ')}</th>)}</tr></thead>
-        <tbody>{items.map(item => (
+        <tbody>{safeItems.map(item => (
           <tr key={item.id} className={selected?.id === item.id ? 'selected' : ''} onClick={() => setSelected(selected?.id === item.id ? null : item)}>
             <td>{item.id}</td>{columns.map(c => <td key={c}>{formatCell(item[c])}</td>)}
           </tr>))}</tbody></table></div>

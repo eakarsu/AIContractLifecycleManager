@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import ReactMarkdown from 'react-markdown';
+import AIResultRenderer from '../components/AIResultRenderer';
 import {
   FiEdit3, FiList, FiActivity, FiUsers, FiRefreshCw, FiShield,
   FiBriefcase, FiDatabase, FiSend, FiClock
@@ -61,6 +61,48 @@ const tools = [
     ]},
 ];
 
+const presetButtonStyle = {
+  padding: '7px 11px',
+  borderRadius: 8,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const toolPresets = {
+  'auto-redline': [
+    { label: 'Liability revision', form: { contract_id: '1', version_a: 'Liability is capped at fees paid in the twelve months before the claim. Neither party is liable for consequential damages.', version_b: 'Customer liability is uncapped. Vendor liability is capped at fees paid in the three months before the claim. Consequential damages exclusion does not apply to Customer payment obligations.' } },
+    { label: 'Data rights revision', form: { contract_id: '2', version_a: 'Vendor may process Customer Data solely to provide the services and must delete it within 30 days after termination.', version_b: 'Vendor may use Customer Data to improve services, train analytics models, and create aggregated benchmarks. Deletion will occur on a commercially reasonable schedule.' } },
+  ],
+  'clause-library/search': [
+    { label: 'Data breach', form: { query: 'Need a breach notification clause with timing, cooperation, regulator support, and customer notice rights', clause_type: 'data_protection', jurisdiction: 'California, United States', industry: 'SaaS' } },
+    { label: 'Indemnity', form: { query: 'Find balanced indemnification language for IP infringement and third-party claims', clause_type: 'indemnification', jurisdiction: 'Delaware, United States', industry: 'Technology' } },
+  ],
+  'amendment-impact': [
+    { label: 'Pricing amendment', form: { contract_id: '3', amendment_id: '2', amendment_text: 'Amendment increases annual fees by 12%, changes renewal notice from 60 days to 30 days, and removes service credit remedies for scheduled maintenance windows.' } },
+    { label: 'Security amendment', form: { contract_id: '6', amendment_id: '', amendment_text: 'Amendment adds SOC 2 reporting, 48-hour breach notice, annual penetration test summary, and approval rights over new subprocessors.' } },
+  ],
+  'negotiation-simulator': [
+    { label: 'Customer stance', form: { contract_type: 'SaaS Master Services Agreement', our_position: 'We are the customer. We need a 12-month liability cap, breach super-cap, audit rights, deletion obligations, and a 30-day cure period before termination.', counterparty_profile: 'Vendor is growth-stage, wants fast close, resists uncapped obligations, and prefers standard online terms.', scenario: 'Counterparty rejected mutual indemnity and proposed unilateral suspension rights for any payment dispute.' } },
+    { label: 'Vendor stance', form: { contract_type: 'Data Processing Addendum', our_position: 'We are the vendor. We can accept subprocessors notice and breach cooperation but need reasonable audit limits and no open-ended indemnity.', counterparty_profile: 'Enterprise customer with strict procurement, strong privacy team, and a hard deadline before quarter close.', scenario: 'Customer asks for unlimited liability for privacy claims and onsite audits twice per year.' } },
+  ],
+  'renewal-generator': [
+    { label: 'Upsell renewal', form: { contract_id: '4', market_changes: 'Cloud infrastructure costs increased 8%, customer usage grew 34%, and competitor pricing moved toward usage-based tiers.', our_priorities: 'margin protection, multi-year commitment, expanded data add-on, stronger payment terms' } },
+    { label: 'Retention renewal', form: { contract_id: '11', market_changes: 'Customer satisfaction is mixed due to onboarding delays, but service usage remains high and switching costs are meaningful.', our_priorities: 'retain account, fix SLA concerns, avoid discounting below 5%, secure reference rights' } },
+  ],
+  'compliance-drift': [
+    { label: 'Privacy drift', form: { contract_id: '5', regulations: 'GDPR, CCPA, CPRA', regulation_changes: 'New privacy guidance emphasizes deletion rights, subprocessors transparency, automated decision-making disclosures, and cross-border transfer controls.' } },
+    { label: 'Healthcare drift', form: { contract_id: '13', regulations: 'HIPAA, HITECH, state privacy laws', regulation_changes: 'Customer now stores patient-related metadata in the platform and requires business associate-style safeguards and breach notice timing.' } },
+  ],
+  'party-intelligence': [
+    { label: 'By party ID', form: { party_id: '1', party_name: '' } },
+    { label: 'By party name', form: { party_id: '', party_name: 'Acme Manufacturing LLC' } },
+  ],
+};
+
 export default function AICustomToolsPage() {
   const [activeTool, setActiveTool] = useState(tools[0].id);
   const [form, setForm] = useState({});
@@ -71,6 +113,12 @@ export default function AICustomToolsPage() {
   const [showHistory, setShowHistory] = useState(false);
 
   const tool = tools.find(t => t.id === activeTool);
+  const presets = toolPresets[activeTool] || [];
+  const applyPreset = (preset) => {
+    setForm(preset.form || {});
+    setResult(null);
+    setError(null);
+  };
 
   useEffect(() => { setForm({}); setResult(null); setError(null); }, [activeTool]);
 
@@ -103,25 +151,6 @@ export default function AICustomToolsPage() {
     setLoading(false);
   };
 
-  const renderResult = () => {
-    if (!result) return null;
-    const { model, usage, raw, ...content } = result;
-    return (
-      <div className="ai-result-card">
-        <div className="ai-result-header">
-          <span className="badge">Result</span>
-          {model && <span className="ai-result-meta">Model: {model}</span>}
-          {usage?.total_tokens && <span className="ai-result-meta">Tokens: {usage.total_tokens}</span>}
-        </div>
-        {raw ? (
-          <div className="ai-raw-output"><ReactMarkdown>{raw}</ReactMarkdown></div>
-        ) : (
-          <pre className="ai-result-json">{JSON.stringify(content, null, 2)}</pre>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="page-container">
       <div className="page-header">
@@ -146,6 +175,15 @@ export default function AICustomToolsPage() {
 
       <div className="ai-chat-container">
         <div className="ai-form">
+          {presets.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+              {presets.map(preset => (
+                <button key={preset.label} type="button" onClick={() => applyPreset(preset)} style={presetButtonStyle}>
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
           {tool.fields.map(f => (
             <div key={f.name} className="form-group">
               <label className="form-label">{f.label}{f.required ? ' *' : ''}</label>
@@ -181,22 +219,18 @@ export default function AICustomToolsPage() {
 
         <div className="chat-messages" style={{maxHeight: 'none'}}>
           {loading && <div className="loading"><div className="spinner"></div>Running {tool.name}...</div>}
-          {renderResult()}
+          <AIResultRenderer result={result} title={tool.name} />
           {showHistory && (
             <div style={{marginTop: 24}}>
               <h3>Recent Results ({tool.name})</h3>
               {results.length === 0 && <div className="empty-state">No history yet</div>}
               {results.map(r => (
-                <div key={r.id} className="ai-result-card" style={{marginBottom: 8}}>
-                  <div className="ai-result-header">
-                    <span className="badge">#{r.id}</span>
-                    <span className="ai-result-meta">{new Date(r.created_at).toLocaleString()}</span>
-                    {r.contract_id && <span className="ai-result-meta">Contract #{r.contract_id}</span>}
-                  </div>
-                  <pre className="ai-result-json" style={{maxHeight: 200, overflow: 'auto'}}>
-                    {JSON.stringify(r.output, null, 2)}
-                  </pre>
-                </div>
+                <AIResultRenderer
+                  key={r.id}
+                  result={{ ai_result: r.output, model: r.model, usage: r.usage }}
+                  title={`Result #${r.id}${r.contract_id ? ` · Contract #${r.contract_id}` : ''} · ${new Date(r.created_at).toLocaleString()}`}
+                  compact
+                />
               ))}
             </div>
           )}

@@ -52,6 +52,58 @@ const toolFields = {
   ],
 };
 
+const presetButtonStyle = {
+  padding: '7px 11px',
+  borderRadius: 8,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const chatPresets = [
+  { label: 'Explain renewal risk', input: 'Explain the top renewal risks in a SaaS master services agreement and what clauses I should inspect first.' },
+  { label: 'Draft negotiation email', input: 'Draft a concise negotiation email asking for narrower indemnity, a mutual liability cap, and a 30-day cure period.' },
+  { label: 'Clause checklist', input: 'Give me a practical checklist for reviewing confidentiality, data protection, termination, and audit clauses.' },
+];
+
+const toolPresets = {
+  'draft-contract': [
+    { label: 'SaaS services', form: { contract_type: 'Service Agreement', party_a: 'Northstar Analytics Inc.', party_b: 'Acme Manufacturing LLC', jurisdiction: 'New York, United States', key_terms: '12-month term, $18,000 monthly subscription, uptime SLA, standard support, mutual confidentiality, data processing terms, limitation of liability capped at 12 months of fees.' }, input: 'Draft in a balanced commercial tone with clear sections and practical definitions.' },
+    { label: 'Mutual NDA', form: { contract_type: 'NDA', party_a: 'Blue Harbor Capital', party_b: 'Vector Robotics', jurisdiction: 'Delaware, United States', key_terms: 'Mutual disclosure, 3-year confidentiality period, exclusions for independently developed information, no license grant, equitable relief, return or destruction on request.' }, input: 'Make the NDA concise but enforceable.' },
+  ],
+  'review-contract': [
+    { label: 'Comprehensive MSA', form: { contract_text: 'Master Services Agreement: Vendor provides managed analytics services. Customer must pay invoices within 15 days. Vendor may suspend access for non-payment. Liability is uncapped for all claims. Customer indemnifies Vendor for third-party claims. Agreement renews automatically for one-year terms unless either party gives 15 days notice.', focus: 'comprehensive' }, input: 'Prioritize business risks and missing protective clauses.' },
+    { label: 'Termination focus', form: { contract_text: 'Either party may terminate for convenience with 180 days notice. Vendor may terminate immediately if Customer disputes an invoice. Upon termination, all fees through the full term become immediately due.', focus: 'termination' }, input: 'Identify unfair exit provisions and propose replacement wording.' },
+  ],
+  'analyze-risk': [
+    { label: 'High-value SaaS', form: { contract_text: 'Three-year SaaS agreement with automated renewal, uncapped liability for customer, vendor audit rights on 48 hours notice, broad data usage rights, and limited termination rights.', industry: 'SaaS / Technology', contract_value: '750000' }, input: 'Score risk and give mitigation steps.' },
+    { label: 'Construction supply', form: { contract_text: 'Supplier provides critical construction materials. Delivery dates are estimates only. Buyer accepts price escalation after purchase order. Warranty period is 30 days. No liquidated damages.', industry: 'Construction', contract_value: '2100000' }, input: 'Focus on operational and financial exposure.' },
+  ],
+  'generate-clause': [
+    { label: 'Data protection', form: { clause_type: 'data_protection', context: 'Vendor processes customer personal data for analytics services and may use approved subprocessors. Customer needs audit rights, breach notice, deletion, and regulatory cooperation.', jurisdiction: 'California, United States' }, input: 'Use balanced SaaS vendor/customer language.' },
+    { label: 'Liability cap', form: { clause_type: 'liability', context: 'B2B services agreement with recurring monthly fees, professional services, and potential confidentiality/data breach exposure.', jurisdiction: 'New York, United States' }, input: 'Include carve-outs and a super-cap for data breach claims.' },
+  ],
+  'compare-contracts': [
+    { label: 'Renewal change', form: { contract_a: 'Term renews annually unless either party gives 60 days notice. Fees may increase by up to 3% annually. Liability cap equals fees paid in prior 12 months.', contract_b: 'Term renews automatically unless Customer gives 15 days notice. Fees may increase at Vendor discretion. Liability cap excludes payment obligations only.' }, input: 'Summarize business impact and negotiation priorities.' },
+    { label: 'Data rights change', form: { contract_a: 'Vendor may process customer data solely to provide services and must delete data within 30 days after termination.', contract_b: 'Vendor may use customer data to improve services and develop aggregated analytics. Deletion occurs upon commercially reasonable schedule.' }, input: 'Highlight privacy and data ownership changes.' },
+  ],
+  'check-compliance': [
+    { label: 'GDPR DPA', form: { contract_text: 'Vendor processes EU personal data but breach notice is commercially reasonable. Subprocessors may be added without notice. Data deletion is available upon paid request.', regulations: 'GDPR, UK GDPR', jurisdiction: 'European Union' }, input: 'Identify compliance gaps and required clause changes.' },
+    { label: 'HIPAA vendor', form: { contract_text: 'Vendor hosts healthcare customer files. Agreement includes confidentiality but no business associate obligations, no breach timing, and no subcontractor restrictions.', regulations: 'HIPAA, HITECH', jurisdiction: 'United States' }, input: 'List missing BAA controls.' },
+  ],
+  negotiate: [
+    { label: 'Reduce indemnity', form: { contract_text: 'Customer indemnifies Vendor for all third-party claims, including claims caused by Vendor negligence. Liability is uncapped. Vendor may terminate immediately for any breach.', your_position: 'We are the customer. We need mutual indemnity, fault-based obligations, a liability cap, and notice/cure rights.', priority: 'indemnity, liability cap, termination' }, input: 'Give a negotiation plan with fallback positions.' },
+    { label: 'Vendor-friendly fallback', form: { contract_text: 'Customer requests unlimited liability for data breach, extensive audit rights, and 90-day termination for convenience.', your_position: 'We are the vendor. We can accept meaningful security commitments but need predictable liability and operationally reasonable audits.', priority: 'liability, audits, data security' }, input: 'Propose balanced concessions.' },
+  ],
+  summarize: [
+    { label: 'Executive brief', form: { contract_text: 'Five-year distribution agreement with exclusivity, annual minimum purchase commitments, quarterly rebates, termination for missed targets, and audit rights for sales reporting.', audience: 'executive', length: 'brief' }, input: 'Emphasize obligations, financial exposure, and decisions needed.' },
+    { label: 'Legal detailed', form: { contract_text: 'Software license with source code escrow, customer audit rights, strict confidentiality, IP ownership retained by licensor, indemnity for infringement, and maintenance SLA credits.', audience: 'legal', length: 'detailed' }, input: 'Break down key legal terms and risk flags.' },
+  ],
+};
+
 export default function AIChatPage() {
   const [activeTool, setActiveTool] = useState('chat');
   const [messages, setMessages] = useState([]);
@@ -91,6 +143,11 @@ export default function AIChatPage() {
 
   const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
   const fields = toolFields[activeTool];
+  const presets = activeTool === 'chat' ? chatPresets : (toolPresets[activeTool] || []);
+  const applyPreset = (preset) => {
+    setForm(preset.form || {});
+    setInput(preset.input || '');
+  };
 
   return (
     <div className="page-container">
@@ -105,6 +162,15 @@ export default function AIChatPage() {
         ))}
       </div>
       <div className="ai-chat-container">
+        {presets.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            {presets.map(preset => (
+              <button key={preset.label} type="button" onClick={() => applyPreset(preset)} style={presetButtonStyle}>
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        )}
         {fields && (
           <div className="ai-form">
             {fields.map(f => (

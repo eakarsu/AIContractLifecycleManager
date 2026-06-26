@@ -1,5 +1,6 @@
 // // === Batch 02 Gaps & Frontend Mounts ===
 import React, { useState } from 'react';
+import AIResultRenderer from '../components/AIResultRenderer';
 
 /**
  * Gap/CFS Feature Page: No analytics dashboard (contract spend, risk heatmap, cycle-time).
@@ -118,16 +119,7 @@ export default function NoAnalyticsDashboardContractSpendRiskHeatmapCycleTimPage
           Error: {error}
         </div>
       )}
-      {result && (
-        <div style={{ marginTop: 16, padding: 12, background: '#0f172a', borderRadius: 6, border: '1px solid #1f2937' }}>
-          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
-            Model: {result.model || 'n/a'} | Tokens: {result.tokens || 'n/a'}
-          </div>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, margin: 0 }}>
-{JSON.stringify(result.ai_result || result, null, 2)}
-          </pre>
-        </div>
-      )}
+      <AIResultRenderer result={result} title="AI Analysis" />
     </div>
   );
 }

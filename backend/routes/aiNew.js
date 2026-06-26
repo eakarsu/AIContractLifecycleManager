@@ -1,12 +1,11 @@
 const express = require('express');
-const axios = require('axios');
 const pool = require('../db');
 const auth = require('../middleware/auth');
 const { aiRateLimiter } = require('../middleware/rateLimiter');
+const { callOpenRouter } = require('../services/aiHelper');
 const router = express.Router();
 
 const AI_SYSTEM = 'You are an expert contract lawyer and lifecycle management specialist.';
-const AI_MODEL = 'anthropic/claude-3-5-sonnet-20241022';
 
 const aiCall = async (userMsg, temp = 0.5, maxTokens = 3000) => {
   if (!process.env.OPENROUTER_API_KEY) {
@@ -14,27 +13,11 @@ const aiCall = async (userMsg, temp = 0.5, maxTokens = 3000) => {
     err.statusCode = 503;
     throw err;
   }
-  const response = await axios.post(
-    `${process.env.OPENROUTER_BASE_URL}/chat/completions`,
-    {
-      model: AI_MODEL,
-      messages: [
-        { role: 'system', content: AI_SYSTEM },
-        { role: 'user', content: userMsg }
-      ],
-      temperature: temp,
-      max_tokens: maxTokens,
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'AI Contract Lifecycle Manager',
-      }
-    }
-  );
-  return response.data.choices?.[0]?.message?.content || '';
+  const response = await callOpenRouter(AI_SYSTEM, userMsg, {
+    temperature: temp,
+    maxTokens,
+  });
+  return response.content || '';
 };
 
 const parseJson = (text) => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
-import ReactMarkdown from 'react-markdown';
+import AIResultRenderer from '../components/AIResultRenderer';
 import { FiCheckSquare, FiRefreshCw, FiActivity, FiSend, FiTrendingUp, FiCheckCircle } from 'react-icons/fi';
 
 // Advanced AI tools (matches backend /api/ai routes in routes/aiNew.js)
@@ -32,6 +32,44 @@ const tools = [
     ]},
 ];
 
+const presetButtonStyle = {
+  padding: '7px 11px',
+  borderRadius: 8,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const toolPresets = {
+  'obligation-extractor': [
+    { label: 'SaaS obligations', form: { contract_text: 'Customer must pay invoices within 30 days. Vendor must maintain 99.9% uptime, provide breach notice within 48 hours, complete onboarding within 20 business days, and deliver quarterly security reports. Customer must provide implementation data within 10 days after kickoff. Late payment accrues 1.5% monthly interest.' } },
+    { label: 'Construction milestones', form: { contract_text: 'Contractor shall complete foundation work by March 15, framing by May 1, and final inspection by July 30. Owner must approve change orders within five business days. Contractor must maintain insurance certificates and submit safety reports weekly.' } },
+  ],
+  'renewal-advisor': [
+    { label: 'Contract 1', form: { contract_id: '1' } },
+    { label: 'Contract 7', form: { contract_id: '7' } },
+    { label: 'Contract 12', form: { contract_id: '12' } },
+  ],
+  'contract-health': [
+    { label: 'Contract 2', form: { contract_id: '2' } },
+    { label: 'Contract 8', form: { contract_id: '8' } },
+    { label: 'Contract 14', form: { contract_id: '14' } },
+  ],
+  'predict-renewal-success': [
+    { label: 'Contract 3', form: { contract_id: '3' } },
+    { label: 'Contract 9', form: { contract_id: '9' } },
+    { label: 'Contract 15', form: { contract_id: '15' } },
+  ],
+  'predict-approval-likelihood': [
+    { label: 'Contract 4', form: { contract_id: '4' } },
+    { label: 'Contract 10', form: { contract_id: '10' } },
+    { label: 'Contract 16', form: { contract_id: '16' } },
+  ],
+};
+
 export default function AIAdvancedPage() {
   const [activeTool, setActiveTool] = useState(tools[0].id);
   const [form, setForm] = useState({});
@@ -39,6 +77,12 @@ export default function AIAdvancedPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const tool = tools.find(t => t.id === activeTool);
+  const presets = toolPresets[activeTool] || [];
+  const applyPreset = (preset) => {
+    setForm(preset.form || {});
+    setResult(null);
+    setError(null);
+  };
 
   const submit = async () => {
     setError(null); setResult(null);
@@ -65,25 +109,6 @@ export default function AIAdvancedPage() {
     setLoading(false);
   };
 
-  const renderResult = () => {
-    if (!result) return null;
-    const { model, usage, raw, ...content } = result;
-    return (
-      <div className="ai-result-card">
-        <div className="ai-result-header">
-          <span className="badge">Result</span>
-          {model && <span className="ai-result-meta">Model: {model}</span>}
-          {usage?.total_tokens && <span className="ai-result-meta">Tokens: {usage.total_tokens}</span>}
-        </div>
-        {raw ? (
-          <div className="ai-raw-output"><ReactMarkdown>{raw}</ReactMarkdown></div>
-        ) : (
-          <pre className="ai-result-json">{JSON.stringify(content, null, 2)}</pre>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="page-container">
       <div className="page-header">
@@ -107,6 +132,15 @@ export default function AIAdvancedPage() {
 
       <div className="ai-chat-container">
         <div className="ai-form">
+          {presets.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+              {presets.map(preset => (
+                <button key={preset.label} type="button" onClick={() => applyPreset(preset)} style={presetButtonStyle}>
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
           {tool.fields.map(f => (
             <div key={f.name} className="form-group">
               <label className="form-label">{f.label}{f.required ? ' *' : ''}</label>
@@ -135,7 +169,7 @@ export default function AIAdvancedPage() {
 
         <div className="chat-messages" style={{maxHeight: 'none'}}>
           {loading && <div className="loading"><div className="spinner"></div>Running {tool.name}...</div>}
-          {renderResult()}
+          <AIResultRenderer result={result} title={tool.name} />
         </div>
       </div>
     </div>
