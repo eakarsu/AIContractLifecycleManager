@@ -3,9 +3,19 @@ const pool = require('../db');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
+async function ensureApprovalSchema() {
+  await pool.query(`
+    ALTER TABLE approvals
+      ADD COLUMN IF NOT EXISTS approver_id INTEGER,
+      ADD COLUMN IF NOT EXISTS due_date DATE,
+      ADD COLUMN IF NOT EXISTS notes TEXT
+  `);
+}
+
 // GET /api/approvals
 router.get('/', auth, async (req, res) => {
   try {
+    await ensureApprovalSchema();
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const offset = (page - 1) * limit;
@@ -32,6 +42,7 @@ router.get('/', auth, async (req, res) => {
 // GET /api/approvals/:id
 router.get('/:id', auth, async (req, res) => {
   try {
+    await ensureApprovalSchema();
     const r = await pool.query('SELECT * FROM approvals WHERE id = $1', [req.params.id]);
     if (r.rows.length === 0) return res.status(404).json({ error: 'Approval not found' });
     res.json(r.rows[0]);
@@ -41,13 +52,25 @@ router.get('/:id', auth, async (req, res) => {
 // POST /api/approvals
 router.post('/', auth, async (req, res) => {
   try {
-    const { contract_id, approver_id, approver_name, approver_email, approval_type, due_date, notes } = req.body;
+    await ensureApprovalSchema();
+    const { contract_id, approver_id, approver_name, approver_email, approval_type, status, comments, due_date, notes, priority } = req.body;
     if (!contract_id || !approval_type) return res.status(400).json({ error: 'contract_id and approval_type are required' });
     const r = await pool.query(
-      `INSERT INTO approvals (contract_id, approver_id, approver_name, approver_email, approval_type, status, due_date, notes, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW()) RETURNING *`,
-      [contract_id, approver_id || null, approver_name || null, approver_email || null, approval_type,
-       due_date ? new Date(due_date) : null, notes || null]
+      `INSERT INTO approvals
+        (contract_id, approver_id, approver_name, approver_email, approval_type, status, comments, due_date, notes, priority, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW()) RETURNING *`,
+      [
+        contract_id,
+        approver_id || null,
+        approver_name || null,
+        approver_email || null,
+        approval_type,
+        status || 'pending',
+        comments || null,
+        due_date ? new Date(due_date) : null,
+        notes || null,
+        priority || 'normal',
+      ]
     );
     res.status(201).json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -56,11 +79,26 @@ router.post('/', auth, async (req, res) => {
 // PUT /api/approvals/:id
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { approver_id, approver_name, approver_email, approval_type, status, due_date, notes } = req.body;
+    await ensureApprovalSchema();
+    const { contract_id, approver_id, approver_name, approver_email, approval_type, status, comments, due_date, notes, priority } = req.body;
     const r = await pool.query(
-      'UPDATE approvals SET approver_id=$1, approver_name=$2, approver_email=$3, approval_type=$4, status=$5, due_date=$6, notes=$7, updated_at=NOW() WHERE id=$8 RETURNING *',
-      [approver_id || null, approver_name || null, approver_email || null, approval_type, status || 'pending',
-       due_date ? new Date(due_date) : null, notes || null, req.params.id]
+      `UPDATE approvals
+          SET contract_id=$1, approver_id=$2, approver_name=$3, approver_email=$4,
+              approval_type=$5, status=$6, comments=$7, due_date=$8, notes=$9, priority=$10, updated_at=NOW()
+        WHERE id=$11 RETURNING *`,
+      [
+        contract_id || null,
+        approver_id || null,
+        approver_name || null,
+        approver_email || null,
+        approval_type,
+        status || 'pending',
+        comments || null,
+        due_date ? new Date(due_date) : null,
+        notes || null,
+        priority || 'normal',
+        req.params.id,
+      ]
     );
     if (r.rows.length === 0) return res.status(404).json({ error: 'Approval not found' });
     res.json(r.rows[0]);
@@ -70,6 +108,7 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/approvals/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
+    await ensureApprovalSchema();
     const r = await pool.query('DELETE FROM approvals WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rows.length === 0) return res.status(404).json({ error: 'Approval not found' });
     res.json({ message: 'Approval deleted successfully' });
@@ -79,6 +118,7 @@ router.delete('/:id', auth, async (req, res) => {
 // PUT /api/approvals/:id/approve — approve a contract
 router.put('/:id/approve', auth, async (req, res) => {
   try {
+    await ensureApprovalSchema();
     const { comments } = req.body;
     const r = await pool.query(
       'UPDATE approvals SET status=$1, decision_date=NOW(), comments=$2, updated_at=NOW() WHERE id=$3 RETURNING *',
@@ -92,6 +132,7 @@ router.put('/:id/approve', auth, async (req, res) => {
 // PUT /api/approvals/:id/reject — reject a contract
 router.put('/:id/reject', auth, async (req, res) => {
   try {
+    await ensureApprovalSchema();
     const { reason } = req.body;
     const r = await pool.query(
       'UPDATE approvals SET status=$1, decision_date=NOW(), comments=$2, updated_at=NOW() WHERE id=$3 RETURNING *',

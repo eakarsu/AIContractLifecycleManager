@@ -1,54 +1,94 @@
 const express = require('express');
 const pool = require('../db');
 const auth = require('../middleware/auth');
+
 const router = express.Router();
 
-// GET /api/settings — get user notification preferences
-router.get('/', auth, async (req, res) => {
+async function ensureSettingsTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS settings (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(255) UNIQUE NOT NULL,
+      value TEXT,
+      category VARCHAR(100) DEFAULT 'general',
+      description TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+}
+
+router.get('/', auth, async (_req, res) => {
   try {
-    const userId = req.user?.id || req.user?.userId;
-    let r = await pool.query('SELECT * FROM settings WHERE user_id = $1', [userId]);
-    if (r.rows.length === 0) {
-      // Auto-create default settings for user
-      r = await pool.query(
-        `INSERT INTO settings (user_id, email_notifications, renewal_alerts_days, obligation_alerts_days,
-         milestone_alerts_days, approval_notifications, daily_digest, timezone, created_at, updated_at)
-         VALUES ($1, true, 30, 7, 7, true, false, 'UTC', NOW(), NOW()) RETURNING *`,
-        [userId]
-      );
-    }
-    res.json(r.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    await ensureSettingsTable();
+    const r = await pool.query('SELECT * FROM settings ORDER BY category, key');
+    res.json(r.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// PUT /api/settings — update user notification preferences
-router.put('/', auth, async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?.userId;
-    const {
-      email_notifications, renewal_alerts_days, obligation_alerts_days,
-      milestone_alerts_days, approval_notifications, daily_digest, timezone
-    } = req.body;
+    await ensureSettingsTable();
+    const r = await pool.query('SELECT * FROM settings WHERE id = $1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: 'Setting not found' });
+    res.json(r.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
+router.post('/', auth, async (req, res) => {
+  try {
+    await ensureSettingsTable();
+    const { key, value, category, description } = req.body;
+    if (!key) return res.status(400).json({ error: 'key is required' });
     const r = await pool.query(
-      `INSERT INTO settings (user_id, email_notifications, renewal_alerts_days, obligation_alerts_days,
-       milestone_alerts_days, approval_notifications, daily_digest, timezone, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
-       ON CONFLICT (user_id) DO UPDATE SET
-         email_notifications = EXCLUDED.email_notifications,
-         renewal_alerts_days = EXCLUDED.renewal_alerts_days,
-         obligation_alerts_days = EXCLUDED.obligation_alerts_days,
-         milestone_alerts_days = EXCLUDED.milestone_alerts_days,
-         approval_notifications = EXCLUDED.approval_notifications,
-         daily_digest = EXCLUDED.daily_digest,
-         timezone = EXCLUDED.timezone,
+      `INSERT INTO settings (key, value, category, description, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,NOW(),NOW())
+       ON CONFLICT (key) DO UPDATE SET
+         value = EXCLUDED.value,
+         category = EXCLUDED.category,
+         description = EXCLUDED.description,
          updated_at = NOW()
        RETURNING *`,
-      [userId, email_notifications ?? true, renewal_alerts_days ?? 30, obligation_alerts_days ?? 7,
-       milestone_alerts_days ?? 7, approval_notifications ?? true, daily_digest ?? false, timezone || 'UTC']
+      [key, value || '', category || 'general', description || null]
     );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/:id', auth, async (req, res) => {
+  try {
+    await ensureSettingsTable();
+    const { key, value, category, description } = req.body;
+    if (!key) return res.status(400).json({ error: 'key is required' });
+    const r = await pool.query(
+      `UPDATE settings
+          SET key=$1, value=$2, category=$3, description=$4, updated_at=NOW()
+        WHERE id=$5
+        RETURNING *`,
+      [key, value || '', category || 'general', description || null, req.params.id]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: 'Setting not found' });
     res.json(r.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await ensureSettingsTable();
+    const r = await pool.query('DELETE FROM settings WHERE id = $1 RETURNING id', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: 'Setting not found' });
+    res.json({ message: 'Setting deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

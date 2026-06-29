@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import ReactMarkdown from 'react-markdown';
 import { FiMessageSquare, FiFileText, FiSearch, FiAlertTriangle, FiList, FiCopy, FiShield, FiUsers, FiBookOpen, FiSend } from 'react-icons/fi';
@@ -64,9 +65,12 @@ const presetButtonStyle = {
 };
 
 const chatPresets = [
-  { label: 'Explain renewal risk', input: 'Explain the top renewal risks in a SaaS master services agreement and what clauses I should inspect first.' },
-  { label: 'Draft negotiation email', input: 'Draft a concise negotiation email asking for narrower indemnity, a mutual liability cap, and a 30-day cure period.' },
-  { label: 'Clause checklist', input: 'Give me a practical checklist for reviewing confidentiality, data protection, termination, and audit clauses.' },
+  { label: 'List contracts', input: 'List contracts' },
+  { label: 'Open renewals', input: 'Open renewals' },
+  { label: 'Create obligation', input: 'Create obligation for monthly security report' },
+  { label: 'Run redline', input: 'Run auto redline for contract 1' },
+  { label: 'Send notifications', input: 'Send expiry notifications' },
+  { label: 'Dashboard counts', input: 'How many contracts and obligations do we have?' },
 ];
 
 const toolPresets = {
@@ -105,6 +109,7 @@ const toolPresets = {
 };
 
 export default function AIChatPage() {
+  const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState('chat');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -132,9 +137,13 @@ export default function AIChatPage() {
     setMessages(prev => [...prev, { role:'user', content:userMsg }]);
     setInput(''); setLoading(true);
     try {
-      const { data } = await api.post(`/ai/${activeTool}`, payload);
-      const content = data.result || data.response || data.analysis || data.draft || data.review || data.clause || data.comparison || data.compliance || data.strategy || data.summary || JSON.stringify(data, null, 2);
-      setMessages(prev => [...prev, { role:'assistant', content, tokens: data.tokens_used }]);
+      const { data } = activeTool === 'chat'
+        ? await api.post('/system-chat/message', payload)
+        : await api.post(`/ai/${activeTool}`, payload);
+      if (data.action === 'navigate' && data.view) navigate(data.view);
+      const content = data.reply || data.result || data.response || data.analysis || data.draft || data.review || data.clause || data.comparison || data.compliance || data.strategy || data.summary || JSON.stringify(data, null, 2);
+      const actionLabel = data.action ? `Action: ${data.action}` : null;
+      setMessages(prev => [...prev, { role:'assistant', content, tokens: data.tokens_used || data.usage?.total_tokens, actionLabel, data }]);
     } catch (err) {
       setMessages(prev => [...prev, { role:'assistant', content:`Error: ${err.response?.data?.error || err.message}` }]);
     }
@@ -192,6 +201,7 @@ export default function AIChatPage() {
               <div className="chat-avatar">{m.role === 'user' ? '👤' : '⚖'}</div>
               <div className="chat-content">
                 {m.role === 'assistant' ? <ReactMarkdown>{m.content}</ReactMarkdown> : m.content}
+                {m.actionLabel && <div className="chat-meta"><span>{m.actionLabel}</span>{m.data?.view && <span>View: {m.data.view}</span>}</div>}
                 {m.tokens && <div className="chat-meta"><span>Tokens: {m.tokens}</span></div>}
               </div>
             </div>

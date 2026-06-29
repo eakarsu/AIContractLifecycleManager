@@ -56,13 +56,21 @@ async function sendExpiryNotifications() {
   const sent = { renewals: 0, obligations: 0, errors: [] };
 
   try {
+    await pool.query(`
+      ALTER TABLE renewals ADD COLUMN IF NOT EXISTS last_notified_at TIMESTAMP;
+      ALTER TABLE obligations ADD COLUMN IF NOT EXISTS last_notified_at TIMESTAMP;
+    `);
+
     // Find renewals due within 30 days
     const renewalsRes = await pool.query(
-      `SELECT r.*, c.title as contract_title, c.contract_number, u.email as user_email, u.name as user_name
+      `SELECT r.*,
+              COALESCE(r.notice_date, r.new_start_date) AS renewal_date,
+              c.title as contract_title,
+              (SELECT email FROM users ORDER BY id LIMIT 1) as user_email,
+              (SELECT name FROM users ORDER BY id LIMIT 1) as user_name
        FROM renewals r
        LEFT JOIN contracts c ON r.contract_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
-       WHERE r.renewal_date BETWEEN NOW() AND NOW() + INTERVAL '${windowDays} days'
+       WHERE COALESCE(r.notice_date, r.new_start_date) BETWEEN NOW() AND NOW() + INTERVAL '${windowDays} days'
        AND r.status NOT IN ('completed', 'cancelled')
        AND (r.last_notified_at IS NULL OR r.last_notified_at < NOW() - INTERVAL '24 hours')`,
       []
@@ -79,10 +87,10 @@ async function sendExpiryNotifications() {
           <p>Dear ${renewal.user_name || 'Team'},</p>
           <p>The following contract renewal is due in <strong>${daysUntil} day(s)</strong>:</p>
           <table border="1" cellpadding="8" style="border-collapse:collapse;">
-            <tr><td><strong>Contract</strong></td><td>${renewal.contract_title || 'N/A'} (${renewal.contract_number || 'N/A'})</td></tr>
+            <tr><td><strong>Contract</strong></td><td>${renewal.contract_title || 'N/A'}</td></tr>
             <tr><td><strong>Renewal Date</strong></td><td>${new Date(renewal.renewal_date).toLocaleDateString()}</td></tr>
-            <tr><td><strong>Auto-Renew</strong></td><td>${renewal.auto_renew ? 'Yes' : 'No'}</td></tr>
-            ${renewal.renewal_terms ? `<tr><td><strong>Terms</strong></td><td>${renewal.renewal_terms}</td></tr>` : ''}
+            <tr><td><strong>Type</strong></td><td>${renewal.renewal_type || 'manual'}</td></tr>
+            ${renewal.notes ? `<tr><td><strong>Notes</strong></td><td>${renewal.notes}</td></tr>` : ''}
           </table>
           <p>Please review and take appropriate action.</p>
           <p>— AI Contract Lifecycle Manager</p>
@@ -103,10 +111,12 @@ async function sendExpiryNotifications() {
 
     // Find obligations due within 30 days
     const obligationsRes = await pool.query(
-      `SELECT o.*, c.title as contract_title, c.contract_number, u.email as user_email, u.name as user_name
+      `SELECT o.*,
+              c.title as contract_title,
+              (SELECT email FROM users ORDER BY id LIMIT 1) as user_email,
+              (SELECT name FROM users ORDER BY id LIMIT 1) as user_name
        FROM obligations o
        LEFT JOIN contracts c ON o.contract_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
        WHERE o.due_date BETWEEN NOW() AND NOW() + INTERVAL '${windowDays} days'
        AND o.status NOT IN ('completed', 'cancelled')
        AND (o.last_notified_at IS NULL OR o.last_notified_at < NOW() - INTERVAL '24 hours')`,
@@ -126,9 +136,8 @@ async function sendExpiryNotifications() {
           <table border="1" cellpadding="8" style="border-collapse:collapse;">
             <tr><td><strong>Contract</strong></td><td>${obligation.contract_title || 'N/A'}</td></tr>
             <tr><td><strong>Obligation</strong></td><td>${obligation.title}</td></tr>
-            <tr><td><strong>Responsible Party</strong></td><td>${obligation.responsible_party || 'N/A'}</td></tr>
+            <tr><td><strong>Responsible Party</strong></td><td>${obligation.obligated_party || 'N/A'}</td></tr>
             <tr><td><strong>Due Date</strong></td><td>${new Date(obligation.due_date).toLocaleDateString()}</td></tr>
-            ${obligation.penalty ? `<tr><td><strong>Penalty</strong></td><td>${obligation.penalty}</td></tr>` : ''}
           </table>
           ${obligation.description ? `<p><strong>Details:</strong> ${obligation.description}</p>` : ''}
           <p>Please ensure this obligation is fulfilled on time to avoid penalties.</p>

@@ -45,6 +45,8 @@ app.use('/api/ai', require('./routes/portfolioAnalytics'));
 app.use('/api/ai', require('./routes/variantGenerate'));
 app.use('/api/ai', require('./routes/aiNew'));   // new AI endpoints
 app.use('/api/ai', require('./routes/aiCustom'));  // 8 custom non-CRUD AI features
+app.use('/api/system-chat', require('./routes/systemChat'));
+app.use('/api/ops', require('./routes/ops'));
 app.use('/api/contracts', require('./routes/contracts'));
 app.use('/api/clauses', require('./routes/clauses'));
 app.use('/api/templates', require('./routes/templates'));

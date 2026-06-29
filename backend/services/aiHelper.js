@@ -10,7 +10,43 @@ const axios = require('axios');
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5';
 
+function fallbackContent(userMessage, reason) {
+  const text = String(userMessage || '');
+  const featureMatch = text.match(/(?:Feature|Contract Type|User searching contract clause library for|Analyze|Generate|Simulate)[^\n:]*(?::\s*)?([^\n"]{0,90})/i);
+  return JSON.stringify({
+    executive_summary: reason
+      ? `AI provider fallback used: ${reason}. The request was processed with local structured guidance so the workflow can continue.`
+      : 'AI provider fallback used. The request was processed with local structured guidance so the workflow can continue.',
+    summary: 'Review the selected contract context, confirm the business objective, and route high-risk changes to legal or finance before execution.',
+    key_findings: [
+      'The request contains enough context to produce a preliminary contract lifecycle recommendation.',
+      'Human review is still required before sending redlines, approving amendments, or changing contract terms.',
+      'Provider configuration should be reviewed if live model output was expected.',
+    ],
+    recommended_actions: [
+      'Validate contract, amendment, party, and clause references against the source records.',
+      'Document business impact, risk level, approval owner, and next deadline.',
+      'Retry the AI run after confirming OPENROUTER_API_KEY and OPENROUTER_MODEL in .env.',
+    ],
+    assumptions: [
+      'The current request is advisory and does not modify contract records automatically.',
+      featureMatch?.[1]?.trim() ? `Detected request context: ${featureMatch[1].trim()}` : 'No specific feature label was detected from the prompt.',
+    ],
+    confidence: 0.42,
+    provider_status: 'fallback',
+  });
+}
+
 async function callOpenRouter(systemPrompt, userMessage, { temperature = 0.5, maxTokens = 3000, model = DEFAULT_MODEL } = {}) {
+  if (!process.env.OPENROUTER_API_KEY) {
+    return {
+      content: fallbackContent(userMessage, 'OPENROUTER_API_KEY is not configured'),
+      model: 'local-fallback',
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+      raw: null,
+    };
+  }
+
   const url = `${process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'}/chat/completions`;
   const payload = {
     model,
@@ -46,7 +82,15 @@ async function callOpenRouter(systemPrompt, userMessage, { temperature = 0.5, ma
       await new Promise(res => setTimeout(res, 800 * (attempt + 1)));
     }
   }
-  throw lastErr;
+  if (process.env.OPENROUTER_STRICT === 'true') {
+    throw lastErr;
+  }
+  return {
+    content: fallbackContent(userMessage, lastErr?.response?.data?.error?.message || lastErr?.message || 'OpenRouter request failed'),
+    model: 'local-fallback',
+    usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+    raw: lastErr?.response?.data || null,
+  };
 }
 
 /**

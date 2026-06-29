@@ -10,14 +10,47 @@ echo "========================================="
 echo "  $APP_NAME"
 echo "========================================="
 
-# Kill processes on used ports
-echo "Cleaning ports $BACKEND_PORT and $FRONTEND_PORT..."
-lsof -ti:$BACKEND_PORT | xargs kill -9 2>/dev/null || true
-lsof -ti:$FRONTEND_PORT | xargs kill -9 2>/dev/null || true
-sleep 1
-
 cd "$(dirname "$0")"
 ROOT_DIR=$(pwd)
+
+kill_port() {
+  local port=$1
+  local pids
+  for _ in 1 2 3; do
+    pids=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+    [ -z "$pids" ] && return 0
+    echo "  Killing process(es) on port $port: $pids"
+    for pid in $pids; do
+      local ppid
+      local gpid
+      local pcmd
+      local gcmd
+      ppid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ' || true)
+      pcmd=$(ps -o command= -p "$ppid" 2>/dev/null || true)
+      gpid=$(ps -o ppid= -p "$ppid" 2>/dev/null | tr -d ' ' || true)
+      gcmd=$(ps -o command= -p "$gpid" 2>/dev/null || true)
+      if echo "$pcmd" | grep -Eq 'nodemon server\.js|npm exec nodemon'; then
+        kill "$ppid" 2>/dev/null || true
+      fi
+      if echo "$gcmd" | grep -Eq 'nodemon server\.js|npm exec nodemon'; then
+        kill "$gpid" 2>/dev/null || true
+      fi
+      kill "$pid" 2>/dev/null || true
+    done
+    sleep 1
+  done
+  pids=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+  [ -n "$pids" ] && kill -9 $pids 2>/dev/null || true
+}
+
+# Kill processes on used ports and app-specific watchers that can respawn children.
+echo "Cleaning ports $BACKEND_PORT and $FRONTEND_PORT..."
+pkill -f "$ROOT_DIR/backend.*nodemon server.js" 2>/dev/null || true
+pkill -f "$ROOT_DIR/backend/server.js" 2>/dev/null || true
+pkill -f "$ROOT_DIR/frontend.*react-scripts start" 2>/dev/null || true
+kill_port "$BACKEND_PORT"
+kill_port "$FRONTEND_PORT"
+sleep 1
 
 # Load .env
 if [ -f .env ]; then

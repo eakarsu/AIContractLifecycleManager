@@ -111,6 +111,7 @@ export default function AICustomToolsPage() {
   const [error, setError] = useState(null);
   const [results, setResults] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [lookups, setLookups] = useState({ contract_id: [], amendment_id: [], party_id: [] });
 
   const tool = tools.find(t => t.id === activeTool);
   const presets = toolPresets[activeTool] || [];
@@ -121,6 +122,19 @@ export default function AICustomToolsPage() {
   };
 
   useEffect(() => { setForm({}); setResult(null); setError(null); }, [activeTool]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const readRows = (payload) => Array.isArray(payload) ? payload : payload?.data || payload?.rows || payload?.items || [];
+    Promise.all([
+      api.get('/contracts', { params: { limit: 100 } }).then(r => ['contract_id', readRows(r.data)]).catch(() => ['contract_id', []]),
+      api.get('/amendments', { params: { limit: 100 } }).then(r => ['amendment_id', readRows(r.data)]).catch(() => ['amendment_id', []]),
+      api.get('/parties', { params: { limit: 100 } }).then(r => ['party_id', readRows(r.data)]).catch(() => ['party_id', []]),
+    ]).then(entries => {
+      if (!cancelled) setLookups(Object.fromEntries(entries));
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const loadHistory = async () => {
     try {
@@ -149,6 +163,51 @@ export default function AICustomToolsPage() {
       setError(e.response?.data?.error || e.message);
     }
     setLoading(false);
+  };
+
+  const lookupLabel = (fieldName, row) => {
+    if (fieldName === 'contract_id') return `${row.id} · ${row.title || row.contract_type || 'Contract'}`;
+    if (fieldName === 'amendment_id') return `${row.id} · ${row.title || 'Amendment'}${row.contract_id ? ` · Contract ${row.contract_id}` : ''}`;
+    if (fieldName === 'party_id') return `${row.id} · ${row.name || row.email || 'Party'}`;
+    return `${row.id}`;
+  };
+
+  const renderToolField = (f) => {
+    const lookupRows = lookups[f.name] || [];
+    if (lookupRows.length > 0) {
+      return (
+        <select className="form-select"
+          value={form[f.name] || ''}
+          onChange={e => setForm({...form, [f.name]: e.target.value})}>
+          <option value="">Select...</option>
+          {lookupRows.map(row => <option key={row.id} value={row.id}>{lookupLabel(f.name, row)}</option>)}
+        </select>
+      );
+    }
+    if (f.type === 'textarea') {
+      return (
+        <textarea className="form-textarea" rows={4}
+          value={form[f.name] || ''}
+          onChange={e => setForm({...form, [f.name]: e.target.value})}
+          placeholder={`Enter ${f.label.toLowerCase()}...`}/>
+      );
+    }
+    if (f.type === 'select') {
+      return (
+        <select className="form-select"
+          value={form[f.name] || ''}
+          onChange={e => setForm({...form, [f.name]: e.target.value})}>
+          <option value="">Select...</option>
+          {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      );
+    }
+    return (
+      <input className="form-input" type={f.type || 'text'}
+        value={form[f.name] || ''}
+        onChange={e => setForm({...form, [f.name]: e.target.value})}
+        placeholder={`Enter ${f.label.toLowerCase()}...`}/>
+    );
   };
 
   return (
@@ -187,24 +246,7 @@ export default function AICustomToolsPage() {
           {tool.fields.map(f => (
             <div key={f.name} className="form-group">
               <label className="form-label">{f.label}{f.required ? ' *' : ''}</label>
-              {f.type === 'textarea' ? (
-                <textarea className="form-textarea" rows={4}
-                  value={form[f.name] || ''}
-                  onChange={e => setForm({...form, [f.name]: e.target.value})}
-                  placeholder={`Enter ${f.label.toLowerCase()}...`}/>
-              ) : f.type === 'select' ? (
-                <select className="form-select"
-                  value={form[f.name] || ''}
-                  onChange={e => setForm({...form, [f.name]: e.target.value})}>
-                  <option value="">Select...</option>
-                  {f.options.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input className="form-input" type={f.type || 'text'}
-                  value={form[f.name] || ''}
-                  onChange={e => setForm({...form, [f.name]: e.target.value})}
-                  placeholder={`Enter ${f.label.toLowerCase()}...`}/>
-              )}
+              {renderToolField(f)}
             </div>
           ))}
 

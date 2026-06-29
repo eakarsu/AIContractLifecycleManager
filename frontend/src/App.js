@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FiGrid, FiFileText, FiList, FiCopy, FiUsers, FiCheckSquare, FiCheckCircle, FiEdit3, FiRefreshCw, FiShield, FiAlertTriangle, FiFlag, FiFolder, FiActivity, FiSettings, FiMessageSquare, FiChevronLeft, FiChevronRight, FiLogOut, FiZap, FiSearch, FiCpu } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
+import api from './services/api';
+import { FiGrid, FiFileText, FiList, FiCopy, FiUsers, FiCheckSquare, FiCheckCircle, FiEdit3, FiRefreshCw, FiShield, FiAlertTriangle, FiFlag, FiFolder, FiActivity, FiSettings, FiMessageSquare, FiChevronLeft, FiChevronRight, FiLogOut, FiZap, FiSearch, FiCpu, FiSend, FiX, FiMinimize2 } from 'react-icons/fi';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CrudPage from './components/CrudPage';
-import AIChatPage from './pages/AIChatPage';
 import AICustomToolsPage from './pages/AICustomToolsPage';
 import AIAdvancedPage from './pages/AIAdvancedPage';
 import EDiscoveryPage from './pages/EDiscoveryPage';
 import CustomViewsPage from './pages/CustomViewsPage';
 import ObligationEvidenceRoom from './pages/ObligationEvidenceRoom';
+import PlatformOpsPage from './pages/PlatformOpsPage';
 
 // // === Batch 02 Gaps & Frontend Mounts ===
 import CfAgenticContractNegotiation from './pages/CfAgenticContractNegotiation';
@@ -184,12 +186,12 @@ function Sidebar({ collapsed, setCollapsed }) {
       <div className="sidebar-section-title">Main</div>
       <ul className="nav-items">
         <NavLink to="/dashboard" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiGrid/></span><span className="nav-label">Dashboard</span></NavLink>
-        <NavLink to="/ai-chat" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiMessageSquare/></span><span className="nav-label">AI Assistant</span></NavLink>
         <NavLink to="/ai-custom" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiZap/></span><span className="nav-label">AI Custom Tools</span></NavLink>
         <NavLink to="/ai-advanced" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiCpu/></span><span className="nav-label">AI Advanced</span></NavLink>
         <NavLink to="/ai-ediscovery" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiSearch/></span><span className="nav-label">eDiscovery</span></NavLink>
         <NavLink to="/custom-views" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiGrid/></span><span className="nav-label">Contract Views</span></NavLink>
         <NavLink to="/obligation-evidence-room" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiFolder/></span><span className="nav-label">Evidence Room</span></NavLink>
+        <NavLink to="/platform-ops" className={({isActive})=>`nav-item ${isActive?'active':''}`}><span className="nav-icon"><FiSettings/></span><span className="nav-label">Platform Ops</span></NavLink>
       </ul>
       <div className="sidebar-section-title">Contracts</div>
       <ul className="nav-items">
@@ -210,6 +212,122 @@ function Sidebar({ collapsed, setCollapsed }) {
   );
 }
 
+function SystemChatWidget() {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: 'Ask me to list, open, create, update, delete, run AI tools, send notifications, or answer contract questions.',
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    if (open) endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, open]);
+
+  const send = async () => {
+    const message = input.trim();
+    if (!message || loading) return;
+    setMessages(prev => [...prev, { role: 'user', content: message }]);
+    setInput('');
+    setLoading(true);
+    try {
+      const { data } = await api.post('/system-chat/message', { message });
+      if (data.action === 'navigate' && data.view) navigate(data.view);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.reply || data.error || 'Done.',
+        action: data.action,
+        view: data.view,
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.response?.data?.error || err.message}` }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      send();
+    }
+  };
+
+  const quickPrompts = [
+    'List contracts',
+    'Open renewals',
+    'Create obligation for monthly security report',
+    'Run auto redline for contract 1',
+    'Check platform health',
+    'Test Salesforce integration',
+    'Prepare audit binder',
+    'Send test notification',
+  ];
+
+  return (
+    <div className={`system-chat ${open ? 'open' : ''}`}>
+      {open && (
+        <div className="system-chat-panel">
+          <div className="system-chat-header">
+            <div>
+              <div className="system-chat-kicker">System Chatbot</div>
+              <div className="system-chat-title">Contract AI Copilot</div>
+            </div>
+            <div className="system-chat-header-actions">
+              <button type="button" className="system-chat-icon-btn" onClick={() => setOpen(false)} aria-label="Minimize chat"><FiMinimize2 /></button>
+              <button type="button" className="system-chat-icon-btn" onClick={() => { setMessages([]); setInput(''); }} aria-label="Clear chat"><FiX /></button>
+            </div>
+          </div>
+          <div className="system-chat-prompts">
+            {quickPrompts.map(prompt => (
+              <button key={prompt} type="button" onClick={() => setInput(prompt)}>{prompt}</button>
+            ))}
+          </div>
+          <div className="system-chat-messages">
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={`system-chat-message ${message.role}`}>
+                <div className="system-chat-bubble">
+                  {message.role === 'assistant' ? <ReactMarkdown>{message.content}</ReactMarkdown> : message.content}
+                  {(message.action || message.view) && (
+                    <div className="system-chat-meta">
+                      {message.action && <span>{message.action}</span>}
+                      {message.view && <span>{message.view}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="system-chat-message assistant">
+                <div className="system-chat-bubble muted">Working...</div>
+              </div>
+            )}
+            <div ref={endRef} />
+          </div>
+          <div className="system-chat-input-row">
+            <textarea
+              value={input}
+              onChange={event => setInput(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask me to do anything this app provides..."
+            />
+            <button type="button" onClick={send} disabled={loading || !input.trim()} aria-label="Send chat message"><FiSend /></button>
+          </div>
+        </div>
+      )}
+      <button type="button" className="system-chat-launcher" onClick={() => setOpen(value => !value)} aria-label="Open system chatbot">
+        <FiMessageSquare />
+        <span>Chat</span>
+      </button>
+    </div>
+  );
+}
+
 function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   return (
@@ -222,12 +340,13 @@ function AppLayout() {
         <Route path="/codex/operations" element={<ProtectedRoute><CodexOperationsFeature /></ProtectedRoute>} />
 
           <Route path="/dashboard" element={<Dashboard pages={pages}/>} />
-          <Route path="/ai-chat" element={<AIChatPage/>} />
+          <Route path="/ai-chat" element={<Navigate to="/dashboard"/>} />
           <Route path="/ai-custom" element={<AICustomToolsPage/>} />
           <Route path="/ai-advanced" element={<AIAdvancedPage/>} />
           <Route path="/ai-ediscovery" element={<EDiscoveryPage/>} />
           <Route path="/custom-views" element={<CustomViewsPage/>} />
           <Route path="/obligation-evidence-room" element={<ObligationEvidenceRoom/>} />
+          <Route path="/platform-ops" element={<PlatformOpsPage/>} />
           {pages.map(p => (<Route key={p.path} path={p.path} element={<CrudPage title={p.label} apiPath={p.api} columns={p.columns} fields={p.fields} />}/>))}
           <Route path="*" element={<Navigate to="/dashboard"/>} />
         
@@ -248,6 +367,7 @@ function AppLayout() {
         <Route path="/gap/no-webhooks" element={<GapNoWebhooks />} />
       </Routes>
       </div>
+      <SystemChatWidget />
     </div>
   );
 }
