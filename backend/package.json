@@ -4,7 +4,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "npx nodemon server.js",
-    "test": "node tests/smoke.js"
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "axios": "^1.6.2",

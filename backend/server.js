@@ -1,4 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+require('./config/runtime').validateRuntime();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -99,33 +100,6 @@ app.post('/api/notifications/send-expiry', require('./middleware/auth'), async (
 });
 
 const PORT = process.env.BACKEND_PORT || 3001;
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-amendments-lacks-analyze-amendment-impact', require('./routes/gap_amendments_lacks_analyze_amendment_impact'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-renewals-lacks-predict-renewal-success-or-predict-renewal-te', require('./routes/gap_renewals_lacks_predict_renewal_success_or_predict_renewal_te'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-approvals-lacks-predict-approval-likelihood', require('./routes/gap_approvals_lacks_predict_approval_likelihood'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-parties-lacks-counterparty-risk-scoring', require('./routes/gap_parties_lacks_counterparty_risk_scoring'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-limited-third-party-integrations-no-docusign-slack-hubspot-o', require('./routes/gap_limited_third_party_integrations_no_docusign_slack_hubspot_o'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-no-automated-renewal-reminder-or-auto-escalation-workflow', require('./routes/gap_no_automated_renewal_reminder_or_auto_escalation_workflow'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-no-analytics-dashboard-contract-spend-risk-heatmap-cycle-tim', require('./routes/gap_no_analytics_dashboard_contract_spend_risk_heatmap_cycle_tim'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-no-variant-playbook-management-alternative-template-sequence', require('./routes/gap_no_variant_playbook_management_alternative_template_sequence'));
-
-// // === Batch 02 Gaps & Frontend Mounts ===
-app.use('/api/gap-no-webhooks', require('./routes/gap_no_webhooks'));
-
 // === Custom Views — 4 endpoints (mounted BEFORE 404 / listen) ===
 app.use('/api/custom-views', require('./routes/customViews'));
 app.use('/api/obligation-evidence-room', require('./routes/obligationEvidenceRoom'));
