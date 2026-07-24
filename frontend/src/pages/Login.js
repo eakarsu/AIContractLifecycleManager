@@ -7,7 +7,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const fill = () => { setEmail('admin@contractai.com'); setPassword('admin123'); };
+  const fill = () => { setEmail(process.env.REACT_APP_DEMO_EMAIL || ''); setPassword(process.env.REACT_APP_DEMO_PASSWORD || ''); };
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
     try { const { data } = await api.post('/auth/login', { email, password }); localStorage.setItem('token', data.token); navigate('/dashboard'); }
