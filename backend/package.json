@@ -4,6 +4,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "npx nodemon server.js",
+    "provision:demo-credentials": "node scripts/provision-demo-credentials.js",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 import axios from 'axios';
-const BACKEND_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_BASE = process.env.REACT_APP_BACKEND_URL || 'http://127.0.0.1:3001';
 const api = axios.create({ baseURL: `${BACKEND_BASE}/api` });
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');

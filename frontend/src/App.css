@@ -120,7 +120,7 @@ tr.selected { background:var(--accent-light) !important; }
 .login-title { font-size:22px; font-weight:800; text-align:center; margin-bottom:4px; }
 .login-subtitle { color:var(--text-secondary); text-align:center; margin-bottom:28px; font-size:13px; }
 .login-btn { width:100%; padding:12px; font-size:15px; margin-top:8px; }
-.login-fill { display:block; text-align:center; margin-top:16px; color:var(--accent); cursor:pointer; font-size:12px; }
+.login-fill { display:block; width:100%; border:0; background:transparent; text-align:center; margin-top:16px; color:var(--accent); cursor:pointer; font:inherit; font-size:12px; }
 .login-fill:hover { text-decoration:underline; }
 .login-error { background:rgba(239,68,68,0.15); color:var(--danger); padding:10px; border-radius:8px; margin-bottom:16px; font-size:12px; text-align:center; }
 .ai-chat-container { display:flex; flex-direction:column; height:calc(100vh - 120px); }

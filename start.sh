@@ -59,6 +59,8 @@ cd "$root"
 [[ -f .env ]] || { echo "Missing .env; copy .env.example." >&2; exit 1; }
 [[ -d backend/node_modules && -d frontend/node_modules ]] || { echo "Run ./scripts/bootstrap.sh first." >&2; exit 1; }
 set -a; source .env; set +a
+export REACT_APP_BACKEND_URL="${REACT_APP_BACKEND_URL:-http://${BACKEND_HOST:-127.0.0.1}:${BACKEND_PORT:-3001}}"
+(cd backend && npm run provision:demo-credentials)
 (cd backend && npm start) & backend_pid=$!
 (cd frontend && BROWSER=none PORT="${FRONTEND_PORT:-3000}" npm start) & frontend_pid=$!
 cleanup() { kill "$backend_pid" "$frontend_pid" 2>/dev/null || true; }

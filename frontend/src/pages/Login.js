@@ -24,7 +24,7 @@ export default function Login() {
         <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required /></div>
         <button type="submit" className="btn btn-primary login-btn">Sign In</button>
       </form>
-      <span className="login-fill" onClick={fill}>Click to fill demo credentials</span>
+      <button type="button" className="login-fill" onClick={fill}>Auto Fill Demo Credentials</button>
     </div></div>
   );
 }
