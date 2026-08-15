@@ -24,8 +24,10 @@ function isEmpty(value) {
 function tryParseJson(value) {
   if (typeof value !== 'string') return value;
   const trimmed = value.trim();
-  if (!trimmed || (!trimmed.startsWith('{') && !trimmed.startsWith('['))) return value;
-  try { return JSON.parse(trimmed); } catch (_) { return value; }
+  const fenced = trimmed.match(/^```(?:json|javascript|js)?\s*([\s\S]*?)\s*```$/i);
+  const candidate = (fenced?.[1] || trimmed).trim();
+  if (!candidate || (!candidate.startsWith('{') && !candidate.startsWith('['))) return fenced ? candidate : value;
+  try { return JSON.parse(candidate); } catch (_) { return fenced ? candidate : value; }
 }
 
 function displayValue(value, key = '') {
