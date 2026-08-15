@@ -103,6 +103,7 @@ const PORT = process.env.BACKEND_PORT || 3001;
 // === Custom Views — 4 endpoints (mounted BEFORE 404 / listen) ===
 app.use('/api/custom-views', require('./routes/customViews'));
 app.use('/api/obligation-evidence-room', require('./routes/obligationEvidenceRoom'));
+app.use('/api', require('./routes/generatedFeatures').router);
 
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
