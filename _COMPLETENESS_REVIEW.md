@@ -56,3 +56,7 @@ Treat this as a prototype: use agentic negotiate and ai to select one narrow con
 - Needed features 3–4: digest/version, page citation, extraction confidence, human finding disposition, tenant/privilege/counsel access, approval role, immutable version, retention, and audit rules are modeled and tested. Counsel and jurisdictional validation remain external.
 - Needed feature 5 and launch risks: generated gap endpoints are unmounted; runtime validates database/JWT/production CORS; startup is non-destructive and bootstrap/migrate/guarded seed are separate; `.env.example`, `RUNBOOK.md`, tests, and PostgreSQL migration/frontend CI were added.
 - Validation: 4 dependency-free lifecycle/config tests passed; changed shell scripts passed `bash -n`; repository diff passed `git diff --check`. No database, provider, legal corpus, e-signature, or counsel validation was run locally.
+
+## Extension (2026-08-30)
+
+Added authenticated obligation-calendar preview at `POST /api/obligation-calendar/preview`. It computes scheduled, due-soon and overdue work, routes escalations, requires evidence, and never auto-completes obligations. Calendar delivery, e-signature and counsel validation remain open.

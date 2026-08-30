@@ -53,6 +53,7 @@ app.use('/api/clauses', require('./routes/clauses'));
 app.use('/api/templates', require('./routes/templates'));
 app.use('/api/parties', require('./routes/parties'));
 app.use('/api/obligations', require('./routes/obligations'));
+app.use('/api/obligation-calendar', require('./routes/obligationCalendar'));
 app.use('/api/approvals', require('./routes/approvals'));
 app.use('/api/amendments', require('./routes/amendments'));
 app.use('/api/renewals', require('./routes/renewals'));
