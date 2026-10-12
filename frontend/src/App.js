@@ -1,3 +1,4 @@
+import AIReportLibrary from "./components/AIReportLibrary";
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
@@ -331,7 +332,7 @@ function SystemChatWidget() {
 function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   return (
-    <div className="app-layout">
+    <><AIReportLibrary floating /><div className="app-layout">
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <div className={`main-content ${collapsed ? 'expanded' : ''}`}>
         <Routes>
@@ -368,7 +369,7 @@ function AppLayout() {
       </Routes>
       </div>
       <SystemChatWidget />
-    </div>
+    </div></>
   );
 }
 

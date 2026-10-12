@@ -15,11 +15,7 @@ function isPlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
 }
 
-function isEmpty(value) {
-  return value === null || value === undefined || value === '' ||
-    (Array.isArray(value) && value.length === 0) ||
-    (isPlainObject(value) && Object.keys(value).length === 0);
-}
+function isEmpty(value) { return value === null || value === undefined; }
 
 function tryParseJson(value) {
   if (typeof value !== 'string') return value;
@@ -31,7 +27,8 @@ function tryParseJson(value) {
 }
 
 function displayValue(value, key = '') {
-  if (value === null || value === undefined || value === '') return 'Not specified';
+  if (value === null || value === undefined) return 'Not specified';
+  if (value === '') return 'Empty string';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'number') {
     const lowerKey = key.toLowerCase();
@@ -91,7 +88,7 @@ function ObjectSummary({ value }) {
 }
 
 function ArrayValue({ label, value, depth }) {
-  if (value.length === 0) return null;
+  if (value.length === 0) return <section className="ai-result-section"><h4>{humanize(label)}</h4><p>None reported.</p></section>;
   const primitive = value.every(item => !isPlainObject(item) && !Array.isArray(item));
 
   if (primitive) {
@@ -103,6 +100,11 @@ function ArrayValue({ label, value, depth }) {
         </ul>
       </section>
     );
+  }
+
+  if (value.every(isPlainObject)) {
+    const columns = [...new Set(value.flatMap(item => Object.keys(item)))];
+    return <section className="ai-result-section"><h4>{humanize(label)}</h4><div className="ai-report-table-wrap"><table className="ai-report-table"><thead><tr>{columns.map(column => <th key={column}>{humanize(column)}</th>)}</tr></thead><tbody>{value.map((item, index) => <tr key={index}>{columns.map(column => <td key={column}><StructuredValue value={item[column]} depth={depth + 1} /></td>)}</tr>)}</tbody></table></div></section>;
   }
 
   return (
@@ -126,6 +128,7 @@ function StructuredValue({ value, depth = 0 }) {
   const parsed = tryParseJson(value);
 
   if (typeof parsed === 'string') {
+    if (parsed === '') return <p className="ai-result-text">Empty string</p>;
     return <div className="ai-result-markdown"><ReactMarkdown>{parsed}</ReactMarkdown></div>;
   }
 
@@ -138,6 +141,7 @@ function StructuredValue({ value, depth = 0 }) {
   }
 
   const entries = Object.entries(parsed).filter(([, entryValue]) => !isEmpty(entryValue));
+  if (!entries.length) return <p className="ai-result-text">None reported.</p>;
   const primitiveEntries = entries.filter(([, entryValue]) => !isPlainObject(entryValue) && !Array.isArray(entryValue));
   const complexEntries = entries.filter(([, entryValue]) => isPlainObject(entryValue) || Array.isArray(entryValue));
 
@@ -159,14 +163,15 @@ function StructuredValue({ value, depth = 0 }) {
 }
 
 export default function AIResultRenderer({ result, title = 'AI Result', compact = false }) {
-  if (!result) return null;
+  if (result === null || result === undefined) return null;
 
   const parsedResult = tryParseJson(result);
-  const raw = isPlainObject(parsedResult) ? parsedResult.raw : null;
   const model = isPlainObject(parsedResult) ? parsedResult.model : null;
   const tokens = isPlainObject(parsedResult) ? (parsedResult.tokens || parsedResult.usage?.total_tokens) : null;
   const content = isPlainObject(parsedResult) && parsedResult.ai_result !== undefined
     ? tryParseJson(parsedResult.ai_result)
+    : isPlainObject(parsedResult) && parsedResult.result_json != null ? tryParseJson(parsedResult.result_json)
+    : isPlainObject(parsedResult) && parsedResult.raw != null && Object.keys(parsedResult).every(key => META_KEYS.has(key)) ? tryParseJson(parsedResult.raw)
     : parsedResult;
 
   const cleanContent = isPlainObject(content)
@@ -200,11 +205,7 @@ export default function AIResultRenderer({ result, title = 'AI Result', compact 
         </div>
       )}
 
-      {raw ? (
-        <div className="ai-result-markdown"><ReactMarkdown>{raw}</ReactMarkdown></div>
-      ) : (
-        <StructuredValue value={contentWithoutMetrics} />
-      )}
+      <StructuredValue value={contentWithoutMetrics} />
     </div>
   );
 }

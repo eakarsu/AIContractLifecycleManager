@@ -7,7 +7,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const fill = () => { setEmail(process.env.REACT_APP_DEMO_EMAIL || ''); setPassword(process.env.REACT_APP_DEMO_PASSWORD || ''); };
+  const demoAvailable = process.env.REACT_APP_ENABLE_DEMO_CREDENTIAL_AUTOFILL === 'true' && Boolean(process.env.REACT_APP_DEMO_EMAIL && process.env.REACT_APP_DEMO_PASSWORD);
+  const fill = () => { if (!demoAvailable) return; setEmail(process.env.REACT_APP_DEMO_EMAIL); setPassword(process.env.REACT_APP_DEMO_PASSWORD); setError(''); };
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
     try { const { data } = await api.post('/auth/login', { email, password }); localStorage.setItem('token', data.token); navigate('/dashboard'); }
@@ -24,7 +25,8 @@ export default function Login() {
         <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required /></div>
         <button type="submit" className="btn btn-primary login-btn">Sign In</button>
       </form>
-      <button type="button" className="login-fill" onClick={fill}>Auto Fill Demo Credentials</button>
+      <button type="button" className="login-fill" onClick={fill} disabled={!demoAvailable}>Fill demo credentials</button>
+      {!demoAvailable && <p role="status">Demo credentials are not configured for this app session.</p>}
     </div></div>
   );
 }

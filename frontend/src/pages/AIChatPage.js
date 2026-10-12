@@ -1,7 +1,8 @@
+import AIFieldPresets, { completeExample } from '../components/AIFieldPresets';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import ReactMarkdown from 'react-markdown';
+import AIResultRenderer from '../components/AIResultRenderer';
 import { FiMessageSquare, FiFileText, FiSearch, FiAlertTriangle, FiList, FiCopy, FiShield, FiUsers, FiBookOpen, FiSend } from 'react-icons/fi';
 
 const tools = [
@@ -68,7 +69,7 @@ const chatPresets = [
   { label: 'List contracts', input: 'List contracts' },
   { label: 'Open renewals', input: 'Open renewals' },
   { label: 'Create obligation', input: 'Create obligation for monthly security report' },
-  { label: 'Run redline', input: 'Run auto redline for contract 1' },
+  { label: 'Run redline', input: 'Explain the evidence and approval needed before requesting a redline review of a selected actual contract.' },
   { label: 'Send notifications', input: 'Send expiry notifications' },
   { label: 'Dashboard counts', input: 'How many contracts and obligations do we have?' },
 ];
@@ -141,7 +142,7 @@ export default function AIChatPage() {
         ? await api.post('/system-chat/message', payload)
         : await api.post(`/ai/${activeTool}`, payload);
       if (data.action === 'navigate' && data.view) navigate(data.view);
-      const content = data.reply || data.result || data.response || data.analysis || data.draft || data.review || data.clause || data.comparison || data.compliance || data.strategy || data.summary || JSON.stringify(data, null, 2);
+      const content = data.reply ?? data.result ?? data.response ?? data.analysis ?? data.draft ?? data.review ?? data.clause ?? data.comparison ?? data.compliance ?? data.strategy ?? data.summary ?? data;
       const actionLabel = data.action ? `Action: ${data.action}` : null;
       setMessages(prev => [...prev, { role:'assistant', content, tokens: data.tokens_used || data.usage?.total_tokens, actionLabel, data }]);
     } catch (err) {
@@ -151,11 +152,11 @@ export default function AIChatPage() {
   };
 
   const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
-  const fields = toolFields[activeTool];
   const presets = activeTool === 'chat' ? chatPresets : (toolPresets[activeTool] || []);
-  const applyPreset = (preset) => {
-    setForm(preset.form || {});
-    setInput(preset.input || '');
+  const fields=[...(toolFields[activeTool]||[]),{name:'message',label:'Additional instructions',type:'textarea'}];
+  const applyPreset = (preset,index) => {
+    const next=completeExample(fields,{values:{...(preset.form||{}),message:preset.input}},index,activeTool, {...form,message:input});
+    const {message,...values}=next;setForm(values);setInput(message);
   };
 
   return (
@@ -171,18 +172,10 @@ export default function AIChatPage() {
         ))}
       </div>
       <div className="ai-chat-container">
-        {presets.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            {presets.map(preset => (
-              <button key={preset.label} type="button" onClick={() => applyPreset(preset)} style={presetButtonStyle}>
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <AIFieldPresets fields={fields} samples={presets} context={activeTool} disabled={loading} onFill={applyPreset}/>
         {fields && (
           <div className="ai-form">
-            {fields.map(f => (
+            {(toolFields[activeTool] || []).map(f => (
               <div key={f.name} className={f.type === 'textarea' ? '' : 'ai-form-row'} style={f.type === 'textarea' ? {} : {display:'grid',gridTemplateColumns:'1fr',gap:12}}>
                 <div className="form-group">
                   <label className="form-label">{f.label}{f.required ? ' *' : ''}</label>
@@ -200,7 +193,7 @@ export default function AIChatPage() {
             <div key={i} className={`chat-message ${m.role}`}>
               <div className="chat-avatar">{m.role === 'user' ? '👤' : '⚖'}</div>
               <div className="chat-content">
-                {m.role === 'assistant' ? <ReactMarkdown>{m.content}</ReactMarkdown> : m.content}
+                {m.role === 'assistant' ? <AIResultRenderer result={m.content} title="Assistant response" compact /> : m.content}
                 {m.actionLabel && <div className="chat-meta"><span>{m.actionLabel}</span>{m.data?.view && <span>View: {m.data.view}</span>}</div>}
                 {m.tokens && <div className="chat-meta"><span>Tokens: {m.tokens}</span></div>}
               </div>

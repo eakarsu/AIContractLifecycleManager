@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import AIFieldPresets, { completeExample } from '../components/AIFieldPresets';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import AIResultRenderer from '../components/AIResultRenderer';
 import { FiCheckSquare, FiRefreshCw, FiActivity, FiSend, FiTrendingUp, FiCheckCircle } from 'react-icons/fi';
@@ -49,24 +50,24 @@ const toolPresets = {
     { label: 'Construction milestones', form: { contract_text: 'Contractor shall complete foundation work by March 15, framing by May 1, and final inspection by July 30. Owner must approve change orders within five business days. Contractor must maintain insurance certificates and submit safety reports weekly.' } },
   ],
   'renewal-advisor': [
-    { label: 'Contract 1', form: { contract_id: '1' } },
-    { label: 'Contract 7', form: { contract_id: '7' } },
-    { label: 'Contract 12', form: { contract_id: '12' } },
+    { label: 'Owned contract review 1', form: { contract_id: '' } },
+    { label: 'Owned contract review 7', form: { contract_id: '' } },
+    { label: 'Owned contract review 12', form: { contract_id: '' } },
   ],
   'contract-health': [
-    { label: 'Contract 2', form: { contract_id: '2' } },
-    { label: 'Contract 8', form: { contract_id: '8' } },
-    { label: 'Contract 14', form: { contract_id: '14' } },
+    { label: 'Owned contract review 2', form: { contract_id: '' } },
+    { label: 'Owned contract review 8', form: { contract_id: '' } },
+    { label: 'Owned contract review 14', form: { contract_id: '' } },
   ],
   'predict-renewal-success': [
-    { label: 'Contract 3', form: { contract_id: '3' } },
-    { label: 'Contract 9', form: { contract_id: '9' } },
-    { label: 'Contract 15', form: { contract_id: '15' } },
+    { label: 'Owned contract review 3', form: { contract_id: '' } },
+    { label: 'Owned contract review 9', form: { contract_id: '' } },
+    { label: 'Owned contract review 15', form: { contract_id: '' } },
   ],
   'predict-approval-likelihood': [
-    { label: 'Contract 4', form: { contract_id: '4' } },
-    { label: 'Contract 10', form: { contract_id: '10' } },
-    { label: 'Contract 16', form: { contract_id: '16' } },
+    { label: 'Owned contract review 4', form: { contract_id: '' } },
+    { label: 'Owned contract review 10', form: { contract_id: '' } },
+    { label: 'Owned contract review 16', form: { contract_id: '' } },
   ],
 };
 
@@ -76,10 +77,13 @@ export default function AIAdvancedPage() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [contracts, setContracts] = useState([]), [referenceError,setReferenceError] = useState('');
+  useEffect(() => { const controller=new AbortController(); api.get('/contracts',{params:{limit:100},signal:controller.signal}).then(({data})=>setContracts(Array.isArray(data)?data:data.data||data.items||[])).catch(error=>{if(!controller.signal.aborted)setReferenceError(error.message);});return()=>controller.abort(); },[]);
   const tool = tools.find(t => t.id === activeTool);
+  const fields = tool.fields.map(field=>field.name==='contract_id'?{...field,type:'select',options:contracts.map(row=>({value:String(row.id),label:row.title||row.name||String(row.id)}))}:field);
   const presets = toolPresets[activeTool] || [];
-  const applyPreset = (preset) => {
-    setForm(preset.form || {});
+  const applyPreset = (preset,index) => {
+    setForm(completeExample(fields,{values:preset.form||{}},index,tool.name,form));
     setResult(null);
     setError(null);
   };
@@ -132,19 +136,11 @@ export default function AIAdvancedPage() {
 
       <div className="ai-chat-container">
         <div className="ai-form">
-          {presets.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-              {presets.map(preset => (
-                <button key={preset.label} type="button" onClick={() => applyPreset(preset)} style={presetButtonStyle}>
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <AIFieldPresets fields={fields} samples={presets} context={tool.name} disabled={loading} onFill={applyPreset}/>{referenceError && <p role="status">Actual contract choices could not be loaded: {referenceError}</p>}
           {tool.fields.map(f => (
             <div key={f.name} className="form-group">
               <label className="form-label">{f.label}{f.required ? ' *' : ''}</label>
-              {f.type === 'textarea' ? (
+              {f.name==='contract_id' ? <select className="form-input" value={form[f.name]||''} onChange={e=>setForm({...form,[f.name]:e.target.value})}><option value="">Select an actual saved contract</option>{contracts.map(row=><option key={row.id} value={row.id}>{row.title||row.name||row.id}</option>)}</select> : f.type === 'textarea' ? (
                 <textarea className="form-textarea" rows={8}
                           value={form[f.name] || ''}
                           onChange={e => setForm({...form, [f.name]: e.target.value})}
@@ -159,7 +155,7 @@ export default function AIAdvancedPage() {
           ))}
 
           <div style={{marginTop: 12}}>
-            <button className="btn btn-primary" onClick={submit} disabled={loading}>
+            <button className="btn btn-primary" onClick={submit} disabled={loading || fields.some(field=>field.required&&(!String(form[field.name]??'').trim() || field.name==='contract_id'&&!contracts.some(row=>String(row.id)===String(form.contract_id))))}>
               <FiSend/> {loading ? 'Running...' : 'Run AI Tool'}
             </button>
           </div>
