@@ -7,17 +7,23 @@ function createCrudRouter(table, { orderBy = 'created_at DESC', jsonFields = [] 
 
   router.get('/', auth, async (req, res) => {
     try {
+      const search = req.query.search || req.query.q || '';
+      const status = req.query.status || '';
+      const conds=[]; const params=[];
+      if (search) { params.push(`%${search}%`); conds.push(`to_jsonb(t)::text ILIKE $${params.length}`); }
+      if (status) { params.push(status); conds.push(`to_jsonb(t)->>'status' = $${params.length}`); }
+      const where = conds.length ? ` WHERE ${conds.join(' AND ')}` : '';
       // Support optional pagination via ?page=&limit=
       if (req.query.page || req.query.limit) {
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const offset = (page - 1) * limit;
-        const countRes = await pool.query(`SELECT COUNT(*) FROM ${table}`);
+        const countRes = await pool.query(`SELECT COUNT(*) FROM ${table} t${where}`, params);
         const total = parseInt(countRes.rows[0].count);
-        const dataRes = await pool.query(`SELECT * FROM ${table} ORDER BY ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]);
+        const dataRes = await pool.query(`SELECT * FROM ${table} t${where} ORDER BY ${orderBy} LIMIT $${params.length+1} OFFSET $${params.length+2}`, [...params, limit, offset]);
         return res.json({ data: dataRes.rows, total, page, limit, total_pages: Math.ceil(total / limit) });
       }
-      res.json((await pool.query(`SELECT * FROM ${table} ORDER BY ${orderBy}`)).rows);
+      res.json((await pool.query(`SELECT * FROM ${table} t${where} ORDER BY ${orderBy}`, params)).rows);
     }
     catch (err) { res.status(500).json({ error: err.message }); }
   });

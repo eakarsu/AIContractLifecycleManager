@@ -100,6 +100,9 @@ app.post('/api/notifications/send-expiry', require('./middleware/auth'), async (
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+const fp31cClm = require('./routes/fp31c').createFeaturePack({ authenticate: require('./middleware/auth'), getRecords: async () => { try { const r = await pool.query('SELECT * FROM contracts ORDER BY created_at DESC LIMIT 50'); return r.rows; } catch { return []; } } });
+app.use('/api/tasks', fp31cClm.tasksRouter);
+app.use('/api/fp31c', fp31cClm.packRouter);
 const PORT = process.env.BACKEND_PORT || 3001;
 // === Custom Views — 4 endpoints (mounted BEFORE 404 / listen) ===
 app.use('/api/custom-views', require('./routes/customViews'));
